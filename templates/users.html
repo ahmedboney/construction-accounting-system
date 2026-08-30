@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}المستخدمون{% endblock %}
+{% block page_title %}👥 المستخدمون{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-head"><h3>مستخدم جديد</h3></div>
+  <div class="panel-body">
+    <form method="post" action="/users/new" class="form-grid">
+      <div class="field"><label>اسم المستخدم *</label><input type="text" name="username" required></div>
+      <div class="field"><label>الاسم الكامل *</label><input type="text" name="full_name" required></div>
+      <div class="field"><label>كلمة المرور *</label><input type="password" name="password" required minlength="6"></div>
+      <div class="field"><label>الصلاحية</label>
+        <select name="role">
+          <option value="viewer">مشاهدة فقط</option>
+          <option value="accountant">محاسب</option>
+          <option value="admin">مدير النظام</option>
+        </select>
+      </div>
+      <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">إنشاء</button></div>
+    </form>
+  </div>
+</div>
+<div class="panel" style="margin-top:18px">
+  <div class="panel-head"><h3>قائمة المستخدمين</h3></div>
+  <div class="panel-body">
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>#</th><th>المستخدم</th><th>الاسم</th><th>الصلاحية</th><th>إجراءات</th></tr></thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.id }}</td><td><b>{{ u.username }}</b></td><td>{{ u.full_name }}</td>
+          <td>
+            <form method="post" action="/users/{{ u.id }}/role" style="display:flex;gap:4px">
+              <select name="role">
+                {% for r, label in [('admin','مدير'),('accountant','محاسب'),('viewer','مشاهدة')] %}
+                <option value="{{ r }}" {{ 'selected' if u.role==r }}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <button class="btn btn-dark btn-sm">حفظ</button>
+            </form>
+          </td>
+          <td>
+            <div class="toolbar">
+              <form method="post" action="/users/{{ u.id }}/password" style="display:flex;gap:4px">
+                <input type="password" name="password" placeholder="كلمة مرور جديدة" style="width:140px">
+                <button class="btn btn-teal btn-sm">تغيير كلمة المرور</button>
+              </form>
+              {% if u.id != user.id %}
+              <form method="post" action="/users/{{ u.id }}/delete" onsubmit="return confirm('حذف المستخدم؟')"><button class="btn btn-red btn-sm">حذف</button></form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</div>
+{% endblock %}

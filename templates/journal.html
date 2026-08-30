@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}القيود اليومية{% endblock %}
+{% block page_title %}📒 القيود اليومية{% endblock %}
+{% block content %}
+<div class="quick-actions">
+  {% if can_write() %}<a href="/journal/new" class="btn btn-gold">+ قيد جديد</a>{% endif %}
+  <a href="/export/journal" class="btn btn-teal">تصدير دفتر اليومية (Excel)</a>
+  <a href="/export/journal?fmt=pdf" class="btn btn-gold">دفتر اليومية (PDF)</a>
+  {% if can_write() %}
+  <a href="/export/journal/template" class="btn btn-dark btn-sm">تحميل قالب الاستيراد</a>
+  <form method="post" action="/import/journal" enctype="multipart/form-data" class="toolbar" style="align-items:center">
+    <input type="file" name="file" accept=".xlsx" required style="width:250px">
+    <button class="btn btn-violet btn-sm">استيراد قيود (Excel)</button>
+  </form>
+  {% endif %}
+  {% if can_admin() %}
+  <button class="btn btn-red" onclick="openModal('clearModal')">🗑️ مسح كل القيود نهائيًا</button>
+  {% endif %}
+</div>
+<div class="panel">
+  <div class="panel-head"><h3>كشف القيود</h3></div>
+  <div class="panel-body">
+    {% if entries %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>الرقم</th><th>التاريخ</th><th>البيان</th><th>المشروع</th><th>الحسابات</th><th>مدين</th><th>دائن</th><th>النوع</th>{% if can_write() %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td><b>{{ e.movement_no }}</b></td>
+          <td>{{ e.entry_date }}</td>
+          <td>{{ e.description }}</td>
+          <td>{{ e.project_name or '-' }}</td>
+          <td style="max-width:260px"><span class="acc-lines">{{ e.acc_names }}</span></td>
+          <td class="num"><b class="amt-d">{{ num(e.total_d) }}</b></td>
+          <td class="num"><b class="amt-c">{{ num(e.total_c) }}</b></td>
+          <td><span class="badge region">{{ e.entry_type }}</span></td>
+          {% if can_write() %}
+          <td>
+            <div class="toolbar">
+              <a href="/journal/{{ e.id }}/edit" class="btn btn-dark btn-sm">تعديل</a>
+              <form method="post" action="/journal/{{ e.id }}/delete" onsubmit="return confirm('حذف القيد وكامل بنوده؟')"><button class="btn btn-red btn-sm">حذف</button></form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">📒</div>لا توجد قيود</div>{% endif %}
+  </div>
+</div>
+{% if can_admin() %}
+<div id="clearModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3>⚠️ مسح كل القيود نهائيًا</h3><button class="modal-close" data-close-modal>✕</button></div>
+    <div class="modal-body">
+      <p>سيتم <b>حذف جميع القيود وبنودها نهائيًا</b> ولا يمكن التراجع. دليل الحسابات سيظل كما هو.</p>
+      <form method="post" action="/journal/clear">
+        <div class="field"><label>اكتب DELETE لتأكيد المسح النهائي</label><input type="text" name="confirm" placeholder="DELETE" required></div>
+        <div class="modal-foot" style="padding:12px 0 0">
+          <button class="btn btn-red">مسح نهائي</button>
+          <button type="button" class="btn btn-dark" data-close-modal>إلغاء</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

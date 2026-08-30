@@ -1,0 +1,27 @@
+📊 نظام محاسبة المقاولات المتكامل — النسخة النهائية v1.0
+
+نظام محاسبة عربي مبني خصيصًا لشركات المقاولات، يعمل على جهازك مباشرة + متاح على الإنترنت.
+
+✅ إدارة المشاريع والعملاء والموردين والعمالة والمعدات والمخازن
+✅ مستخلصات وضمانات وفحص آلي للدفع + فواتير موردين ومقاولي باطن
+✅ دفتر اليومية والأستاذ العام وميزان المراجعة والقوائم المالية
+✅ تقارير فاخرة عربية PDF وExcel قابلة للتصدير من كل صفحة (بدون حروف ناقصة أو مربعات)
+✅ إهلاك + رواتب + عهدات + أرباح شهرية + ضريبة القيمة المضافة
+✅ نسخ احتياطي تلقائي + يدوي + سجل عمليات + صلاحيات مستخدمين
+✅ حماية كاملة: HTTPS + CSRF + وضع قفل للاستضافة
+
+🖥️ البرنامج الفعلي EXE (ملف واحد بآيقونة باسم النظام — يشمل كل شيء ويعمل بدون أي نافذة أوامر cmd):
+👉 https://github.com/ahmedboney/construction-accounting-system/releases/download/v1.0/program.zip
+
+📂 كود المصدر الكامل (للرفع على استضافة):
+👉 https://github.com/ahmedboney/construction-accounting-system/releases/download/v1.0/source_code.zip
+
+🖼️ أسكرين شوت لكل شاشات النظام (36 صورة):
+👉 https://github.com/ahmedboney/construction-accounting-system/releases/download/v1.0/screenshots-v1.0.zip
+
+📄 صفحة الإصدارات: https://github.com/ahmedboney/construction-accounting-system/releases
+
+🌐 النسخة الحية على الإنترنت (تجربة فورية):
+https://ahmedboney01000.pythonanywhere.com
+
+💬 شاركنا رأيك واطلب تعديلات — التطوير مستمر.

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}مسير الرواتب{% endblock %}
+{% block page_title %}💰 مسير رواتب العمالة{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-head"><h3>توليد مسير شهر</h3></div>
+  <div class="panel-body">
+    {% if can_write() %}
+    <form method="post" action="/payroll/generate" class="form-grid">
+      <div class="field"><label>الفترة (YYYY-MM) *</label><input type="month" name="period" value="{{ default_period }}" required></div>
+      <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">توليد المسير للعاملين النشطين</button></div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel" style="margin-top:18px">
+  <div class="panel-head"><h3>بنود المسير</h3>
+    <div class="toolbar">
+      <a href="/export/payroll" class="btn btn-teal btn-sm">تصدير (Excel)</a>
+      <a href="/export/payroll?fmt=pdf" class="btn btn-gold btn-sm">تصدير (PDF)</a>
+    </div>
+  </div>
+  <div class="panel-body">
+    {% if rows %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>الفترة</th><th>العامل</th><th>أيام العمل</th><th>الإجمالي</th><th>الخصومات</th><th>الصافي</th><th>الحالة</th>{% if can_write() %}<th>إجراءات</th>{% endif %}</tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td><b>{{ r.period }}</b></td>
+          <td>{{ r.worker_name }}</td>
+          <td class="num">{{ num(r.days_worked) }}</td>
+          <td class="num">{{ num(r.gross) }}</td>
+          <td class="num">{{ num(r.deductions) }}</td>
+          <td class="num"><b>{{ num(r.net) }}</b></td>
+          <td><span class="status-badge {{ 'status-mukmal' if r.status=='مسدد' else 'status-jari' }}">{{ r.status }}</span></td>
+          {% if can_write() %}
+          <td>
+            <div class="toolbar">
+              <button class="btn btn-dark btn-sm" onclick="editPayroll({{ r.id }}, {{ r.days_worked }}, {{ r.deductions }})">تعديل</button>
+              {% if r.status != 'مسدد' %}
+              <form method="post" action="/payroll/{{ r.id }}/pay" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+                <input type="date" name="payment_date" style="width:120px;padding:5px 8px">
+                <label style="font-size:12px;display:flex;align-items:center;gap:3px"><input type="checkbox" name="auto_post" checked>ترحيل</label>
+                <button class="btn btn-teal btn-sm">صرف</button>
+              </form>
+              {% endif %}
+              <form method="post" action="/payroll/{{ r.id }}/delete" onsubmit="return confirm('حذف البند؟')"><button class="btn btn-red btn-sm">حذف</button></form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">💰</div>لا توجد بنود — ولّد مسيرًا للشهر أولًا</div>{% endif %}
+  </div>
+</div>
+
+<div id="payrollEditModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3>تعديل بند المسير</h3><button class="modal-close" data-close-modal>✕</button></div>
+    <div class="modal-body">
+      <form method="post" class="form-grid">
+        <div class="field"><label>أيام العمل</label><input type="number" step="any" name="days_worked" required></div>
+        <div class="field"><label>الخصومات</label><input type="number" step="any" name="deductions"></div>
+        <div class="hint" style="grid-column:1/-1">الإجمالي = الأجر × عدد الأيام، والصافي يُحسب تلقائيًا بعد الخصم.</div>
+        <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">حفظ</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function editPayroll(id, days, deductions){
+  const el = $('#payrollEditModal');
+  el.querySelector('form').action = '/payroll/' + id + '/edit';
+  el.querySelector('[name=days_worked]').value = days;
+  el.querySelector('[name=deductions]').value = deductions;
+  openModal('payrollEditModal');
+}
+</script>
+{% if not can_write() %}<script>window.editPayroll = function(){};</script>{% endif %}
+{% endblock %}

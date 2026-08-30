@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}فواتير الموردين{% endblock %}
+{% block page_title %}🧾 فواتير الموردين{% endblock %}
+{% block content %}
+<div class="quick-actions" style="margin-bottom:14px">
+  <span class="hint">كشف حساب كل مورد:</span>
+  {% for s in suppliers %}<a class="btn btn-dark btn-sm" href="/suppliers/{{ s.id }}/statement">{{ s.name }}</a>{% endfor %}
+  <a href="/export/supplier-invoices" class="btn btn-teal btn-sm">تصدير الكل (Excel)</a>
+  <a href="/export/supplier-invoices?fmt=pdf" class="btn btn-gold btn-sm">تصدير الكل (PDF)</a>
+</div>
+<div class="panel">
+  <div class="panel-head"><h3>إضافة فاتورة مورد</h3></div>
+  <div class="panel-body">
+    {% if can_write() %}
+    <form method="post" action="/supplier-invoices/new" class="form-grid">
+      <div class="field"><label>المورد *</label><select name="supplier_id" required>
+        <option value="">اختر</option>
+        {% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+      </select></div>
+      <div class="field"><label>رقم الفاتورة</label><input type="text" name="invoice_no"></div>
+      <div class="field"><label>التاريخ</label><input type="date" name="invoice_date"></div>
+      <div class="field"><label>تاريخ الاستحقاق</label><input type="date" name="due_date"></div>
+      <div class="field"><label>المبلغ *</label><input type="number" step="any" name="amount" required></div>
+      <div class="field" style="grid-column:1/-1"><label>ملاحظات</label><input type="text" name="notes"></div>
+      <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">إضافة الفاتورة</button></div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel" style="margin-top:18px">
+  <div class="panel-head"><h3>سجل الفواتير</h3></div>
+  <div class="panel-body">
+    {% if invoices %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>المورد</th><th>رقم الفاتورة</th><th>التاريخ</th><th>الاستحقاق</th><th>المبلغ</th><th>الحالة</th><th>تاريخ السداد</th>{% if can_write() %}<th>إجراءات</th>{% endif %}</tr></thead>
+      <tbody>
+        {% for r in invoices %}
+        <tr>
+          <td>{{ r.supplier_name }}</td>
+          <td>{{ r.invoice_no or '-' }}</td>
+          <td>{{ r.invoice_date or '-' }}</td>
+          <td>
+            {% if r.due_date %}
+              <span class="{{ 'due-over' if not r.paid and r.due_date < today else 'due-ok' }}">{{ r.due_date }}</span>
+            {% else %}-
+            {% endif %}
+          </td>
+          <td class="num"><b>{{ num(r.amount) }}</b></td>
+          <td><span class="status-badge {{ 'status-mukmal' if r.paid else 'status-jari' }}">{{ 'مسددة' if r.paid else 'غير مسددة' }}</span></td>
+          <td>{{ r.payment_date or '-' }}</td>
+          {% if can_write() %}
+          <td>
+            <div class="toolbar">
+              <button class="btn btn-dark btn-sm" onclick="editInv({{ r.id }}, {{ r.supplier_id or 'null' }}, '{{ (r.invoice_no or '')|e }}', '{{ (r.invoice_date or '')|e }}', '{{ (r.due_date or '')|e }}', {{ r.amount }}, '{{ (r.notes or '')|e }}')">تعديل</button>
+              {% if not r.paid %}
+              <form method="post" action="/supplier-invoices/{{ r.id }}/pay" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+                <input type="number" step="any" name="amount" value="{{ r.amount }}" style="width:90px;padding:5px 8px">
+                <input type="date" name="payment_date" style="width:120px;padding:5px 8px">
+                <select name="method" style="width:80px;padding:5px"><option>نقداً</option><option>تحويل بنكي</option><option>شيك</option></select>
+                <label style="font-size:12px;display:flex;align-items:center;gap:3px"><input type="checkbox" name="auto_post" checked>ترحيل</label>
+                <button class="btn btn-teal btn-sm">سداد</button>
+              </form>
+              {% endif %}
+              <form method="post" action="/supplier-invoices/{{ r.id }}/delete" onsubmit="return confirm('حذف الفاتورة؟')"><button class="btn btn-red btn-sm">حذف</button></form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">🧾</div>لا توجد فواتير</div>{% endif %}
+  </div>
+</div>
+
+<div id="invEditModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3>تعديل الفاتورة</h3><button class="modal-close" data-close-modal>✕</button></div>
+    <div class="modal-body">
+      <form method="post" class="form-grid">
+        <div class="field" style="grid-column:1/-1"><label>المورد</label><select name="supplier_id">
+          {% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>رقم الفاتورة</label><input type="text" name="invoice_no"></div>
+        <div class="field"><label>التاريخ</label><input type="date" name="invoice_date"></div>
+        <div class="field"><label>تاريخ الاستحقاق</label><input type="date" name="due_date"></div>
+        <div class="field"><label>المبلغ</label><input type="number" step="any" name="amount" required></div>
+        <div class="field" style="grid-column:1/-1"><label>ملاحظات</label><input type="text" name="notes"></div>
+        <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">حفظ</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+<style>
+  .due-over { color: #ef4444; font-weight:600; }
+  .due-ok { color: #34d399; }
+</style>
+{% endblock %}
+{% block scripts %}
+<script>
+function editInv(id, supplier_id, invoice_no, invoice_date, due_date, amount, notes){
+  const el = $('#invEditModal');
+  el.querySelector('form').action = '/supplier-invoices/' + id + '/edit';
+  const s = el.querySelector('[name=supplier_id]');
+  if(supplier_id != null) s.value = supplier_id;
+  el.querySelector('[name=invoice_no]').value = invoice_no;
+  el.querySelector('[name=invoice_date]').value = invoice_date;
+  el.querySelector('[name=due_date]').value = due_date;
+  el.querySelector('[name=amount]').value = amount;
+  el.querySelector('[name=notes]').value = notes;
+  openModal('invEditModal');
+}
+</script>
+{% if not can_write() %}<script>window.editInv = function(){};</script>{% endif %}
+{% endblock %}

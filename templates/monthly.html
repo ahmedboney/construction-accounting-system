@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}تقرير الأرباح الشهرية{% endblock %}
+{% block page_title %}📅 تقرير الأرباح الشهرية{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-head"><h3>الأعمال / التكاليف / المحصل / الربح — شهريًا</h3>
+    <div class="quick-actions">
+      <a href="/export/monthly" class="btn btn-teal btn-sm">تصدير (Excel)</a>
+      <a href="/export/monthly?fmt=pdf" class="btn btn-gold btn-sm">تصدير (PDF)</a>
+    </div>
+  </div>
+  <div class="panel-body">
+    {% if rows %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>الشهر</th><th>الأعمال المنفذة</th><th>التكاليف</th><th>المحصل من العميل</th><th>صافي الربح</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td><b>{{ r.month }}</b></td>
+          <td class="num">{{ num(r.work) }}</td>
+          <td class="num">{{ num(r.cost) }}</td>
+          <td class="num">{{ num(r.recv) }}</td>
+          <td class="num"><b class="{{ 'amt-d' if r.profit>=0 else 'amt-c' }}">{{ num(r.profit) }}</b></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td>الإجمالي</td>
+        <td class="num">{{ num(totals.work) }}</td>
+        <td class="num">{{ num(totals.cost) }}</td>
+        <td class="num">{{ num(totals.recv) }}</td>
+        <td class="num">{{ num(totals.profit) }}</td></tr></tfoot>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">📅</div>لا توجد بيانات بعد — سجّل مستخلصات وتكاليف ودفعات لبدء التقرير</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

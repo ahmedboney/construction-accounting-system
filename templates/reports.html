@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}التقارير{% endblock %}
+{% block page_title %}📊 التقارير{% endblock %}
+{% block content %}
+<div class="cards-grid">
+  <div class="card"><div class="lbl">إجمالي العقود</div><div class="val gold">{{ num(total_cv) }}</div></div>
+  <div class="card red"><div class="lbl">إجمالي التكاليف</div><div class="val red">{{ num(total_tc) }}</div></div>
+  <div class="card"><div class="lbl">إجمالي المحصل</div><div class="val teal">{{ num(total_rec) }}</div></div>
+  <div class="card green"><div class="lbl">صافي الربح</div><div class="val green">{{ num(total_profit) }}</div></div>
+</div>
+
+<div class="panel" style="margin-bottom:18px">
+  <div class="panel-head"><h3>تكاليف حسب النوع</h3></div>
+  <div class="panel-body">
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>نوع التكلفة</th><th>الإجمالي</th></tr></thead>
+      <tbody>
+        {% for t, v in cost_by_type.items() %}<tr><td>{{ t }}</td><td class="num">{{ num(v) }}</td></tr>{% endfor %}
+      </tbody>
+      <tfoot><tr><td>الإجمالي</td><td class="num">{{ num(total_tc) }}</td></tr></tfoot>
+    </table></div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head"><h3>تقرير ربحية المشاريع</h3></div>
+  <div class="panel-body">
+    {% if report_rows %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>المشروع</th><th>العقد</th><th>التكلفة</th><th>المحصل</th><th>الربح</th><th>% الربح</th><th>الحالة</th></tr></thead>
+      <tbody>
+        {% for r in report_rows %}
+        <tr>
+          <td><a href="/projects/{{ r.id }}">{{ r.name }}</a></td>
+          <td class="num">{{ num(r.contract_value) }}</td>
+          <td class="num">{{ num(r.cost) }}</td><td class="num">{{ num(r.received) }}</td>
+          <td class="num"><b class="{{ 'amt-d' if r.profit>=0 else 'amt-c' }}">{{ num(r.profit) }}</b></td>
+          <td class="num">{{ num(r.profit_pct) }}%</td>
+          <td><span class="status-badge {{ status_class(r.status) }}">{{ r.status }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td>الإجمالي</td><td class="num">{{ num(total_cv) }}</td><td class="num">{{ num(total_tc) }}</td><td class="num">{{ num(total_rec) }}</td><td class="num">{{ num(total_profit) }}</td><td></td><td></td></tr></tfoot>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">📊</div>لا توجد بيانات</div>{% endif %}
+  </div>
+</div>
+
+<div class="quick-actions" style="margin-top:18px">
+  <a href="/export/projects" class="btn btn-teal">تقرير المشاريع (Excel)</a>
+  <a href="/export/projects?fmt=pdf" class="btn btn-gold">تقرير المشاريع (PDF)</a>
+  <a href="/export/costs" class="btn btn-teal">تقرير التكاليف (Excel)</a>
+  <a href="/export/costs?fmt=pdf" class="btn btn-gold">تقرير التكاليف (PDF)</a>
+  <a href="/monthly" class="btn btn-dark">تقرير الأرباح الشهرية</a>
+  <a href="/custody" class="btn btn-dark">العهد والأمانات</a>
+  <a href="/aging" class="btn btn-dark">كشف المتأخرات</a>
+  <a href="/vat" class="btn btn-dark">تقرير ضريبة القيمة المضافة</a>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}النسخ الاحتياطي{% endblock %}
+{% block page_title %}💾 النسخ الاحتياطي{% endblock %}
+{% block content %}
+<div class="quick-actions">
+  <form method="post" action="/backup/create">
+    <button class="btn btn-gold">+ إنشاء نسخة احتياطية الآن</button>
+  </form>
+  <a href="/" class="btn btn-dark">الرئيسية</a>
+</div>
+<div class="panel">
+  <div class="panel-head"><h3>النسخ المحفوظة</h3><div class="hint">تُنشأ نسخة تلقائية كل شهر ويتم الاحتفاظ بآخر 24 نسخة. استعادة النسخة تُنشئ نسخة أمان قبل الاستعادة.</div></div>
+  <div class="panel-body">
+    {% if backups %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead>
+        <tr><th>الاسم</th><th>الحجم</th><th>آخر تعديل</th><th>إجراءات</th></tr>
+      </thead>
+      <tbody>
+        {% for b in backups %}
+        <tr>
+          <td><b>{{ b.name }}</b></td>
+          <td>{{ (b.size / 1024)|round(1) }} KB</td>
+          <td>{{ b.modified }}</td>
+          <td>
+            <div class="toolbar">
+              <form method="post" action="/backup/download"><input type="hidden" name="name" value="{{ b.name }}"><button class="btn btn-teal btn-sm">تنزيل</button></form>
+              <form method="post" action="/backup/restore" onsubmit="return confirm('استعادة هذه النسخة؟ سيتم استبدال البيانات الحالية.')"><input type="hidden" name="name" value="{{ b.name }}"><button class="btn btn-dark btn-sm">استعادة</button></form>
+              <form method="post" action="/backup/delete" onsubmit="return confirm('حذف هذه النسخة نهائيًا؟')"><input type="hidden" name="name" value="{{ b.name }}"><button class="btn btn-red btn-sm">حذف</button></form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">💾</div>لا توجد نسخ احتياطية بعد</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

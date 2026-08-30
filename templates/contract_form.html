@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}عقد — {{ p.name }}{% endblock %}
+{% block page_title %}📜 عقد المشروع: {{ p.name }}{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-head"><h3>بيانات العقد</h3></div>
+  <div class="panel-body">
+    <form method="post" class="form-grid">
+      <div class="field"><label>رقم العقد</label><input type="text" name="contract_no" value="{{ contract.contract_no if contract else '' }}"></div>
+      <div class="field"><label>تاريخ العقد</label><input type="date" name="contract_date" value="{{ contract.contract_date if contract else '' }}"></div>
+      <div class="field"><label>قيمة العقد *</label><input type="number" step="any" name="contract_value" value="{{ contract.contract_value if contract else '' }}" required></div>
+      <div class="field"><label>نسبة الدفعة المقدمة %</label><input type="number" step="any" name="advance_percent" value="{{ contract.advance_percent if contract else '' }}"></div>
+      <div class="field"><label>قيمة الدفعة المقدمة</label><input type="number" step="any" name="advance_amount" value="{{ contract.advance_amount if contract else '' }}"></div>
+      <div class="field"><label>نسبة محجوز الضمان %</label><input type="number" step="any" name="retention_percent" value="{{ contract.retention_percent if contract else default_ret }}"></div>
+      <div class="field"><label>قيمة المحجوز</label><input type="number" step="any" name="retention_amount" value="{{ contract.retention_amount if contract else '' }}"></div>
+      <div class="field"><label>تاريخ انتهاء الضمان</label><input type="date" name="retention_release_date" value="{{ contract.retention_release_date if contract else '' }}"></div>
+      <div class="field"><label>مدة التنفيذ (يوم)</label><input type="number" name="duration_days" value="{{ contract.duration_days if contract else '' }}"></div>
+      <div class="field" style="grid-column:1/-1"><label>شروط العقد</label><textarea name="terms">{{ contract.terms if contract else '' }}</textarea></div>
+      <div class="field" style="grid-column:1/-1">
+        <button class="btn btn-gold" type="submit">حفظ العقد</button>
+        <a href="/projects/{{ p.id }}" class="btn btn-dark">رجوع للمشروع</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

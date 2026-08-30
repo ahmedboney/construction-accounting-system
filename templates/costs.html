@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}تكاليف المشاريع{% endblock %}
+{% block page_title %}🧮 تكاليف المشاريع{% endblock %}
+{% block content %}
+<div class="cards-grid">
+  <div class="card"><div class="lbl">إجمالي التكاليف المسجلة</div><div class="val red">{{ num(total) }}</div></div>
+</div>
+<div class="panel">
+  <div class="panel-head"><h3>تسجيل تكلفة جديدة</h3></div>
+  <div class="panel-body">
+    {% if can_write() %}
+    <form method="post" action="/costs/new" class="form-grid">
+      <div class="field"><label>المشروع *</label><select name="project_id" required>
+        <option value="">اختر</option>
+        {% for pr in projects %}<option value="{{ pr.id }}">{{ pr.name }}</option>{% endfor %}
+      </select></div>
+      <div class="field"><label>التاريخ</label><input type="date" name="cost_date" required></div>
+      <div class="field"><label>نوع التكلفة</label>
+        <select name="cost_type">
+          {% for t in ['مواد','عمالة','معدات','مقاول باطن','مصروف مباشر','أخرى'] %}
+          <option value="{{ t }}">{{ t }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field"><label>البيان</label><input type="text" name="description"></div>
+      <div class="field"><label>المبلغ *</label><input type="number" step="any" name="amount" required></div>
+      <div class="field"><label>الكمية</label><input type="number" step="any" name="quantity"></div>
+      <div class="field"><label>المورد</label><select name="supplier_id">
+        <option value="">—</option>{% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+      </select></div>
+      <div class="field"><label>مقاول الباطن</label><select name="sub_id">
+        <option value="">—</option>{% for s in subs %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+      </select></div>
+      <div class="field"><label>المادة</label><select name="material_id">
+        <option value="">—</option>{% for m in materials %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}
+      </select></div>
+      <div class="field"><label>ملاحظات</label><input type="text" name="notes"></div>
+      <div class="field" style="grid-column:1/-1">
+        <label style="font-size:13px;display:flex;align-items:center;gap:5px;margin-bottom:8px"><input type="checkbox" name="auto_post" checked>ترحيل تلقائي إلى القيود (مصروف ↔ أوراق دفع)</label>
+        <button class="btn btn-gold">تسجيل التكلفة</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel" style="margin-top:18px">
+  <div class="panel-head"><h3>سجل التكاليف</h3>
+    <div class="toolbar">
+      <a href="/export/costs" class="btn btn-teal btn-sm">تصدير (Excel)</a>
+      <a href="/export/costs?fmt=pdf" class="btn btn-gold btn-sm">تصدير (PDF)</a>
+    </div>
+  </div>
+  <div class="panel-body">
+    {% if rows %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>المشروع</th><th>التاريخ</th><th>النوع</th><th>البيان</th><th>المورد</th><th>مقاول باطن</th><th>المادة</th><th>الكمية</th><th>المبلغ</th>{% if can_write() %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td><a href="/projects/{{ r.project_id }}">{{ r.project_name }}</a></td>
+          <td>{{ r.cost_date }}</td><td>{{ r.cost_type }}</td><td>{{ r.description }}</td>
+          <td>{{ r.supplier_name }}</td><td>{{ r.sub_name }}</td><td>{{ r.material_name }}</td>
+          <td class="num">{{ num(r.quantity) }}</td><td class="num"><b>{{ num(r.amount) }}</b></td>
+          {% if can_write() %}
+          <td>
+            <div class="toolbar">
+              <button class="btn btn-dark btn-sm" onclick="editCost({{ r.id }}, {{ r.project_id or 'null' }}, '{{ (r.cost_date or '')|e }}', '{{ (r.cost_type or '')|e }}', '{{ (r.description or '')|e }}', {{ r.amount }}, {{ r.quantity or 0 }}, {{ r.supplier_id or 'null' }}, {{ r.sub_id or 'null' }}, {{ r.material_id or 'null' }}, '{{ (r.notes or '')|e }}')">تعديل</button>
+              <form method="post" action="/costs/{{ r.id }}/delete" onsubmit="return confirm('حذف؟')"><button class="btn btn-red btn-sm">حذف</button></form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td colspan="8">الإجمالي</td><td class="num">{{ num(total) }}</td>{% if can_write() %}<td></td>{% endif %}</tr></tfoot>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">🧮</div>لا توجد تكاليف</div>{% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function editCost(id, project_id, cost_date, cost_type, description, amount, quantity, supplier_id, sub_id, material_id, notes){
+  const el = $('#costEditModal');
+  el.querySelector('form').action = '/costs/' + id + '/edit';
+  el.querySelector('[name=project_id]').value = project_id || '';
+  el.querySelector('[name=cost_date]').value = cost_date;
+  el.querySelector('[name=cost_type]').value = cost_type;
+  el.querySelector('[name=description]').value = description;
+  el.querySelector('[name=amount]').value = amount;
+  el.querySelector('[name=quantity]').value = quantity || '';
+  el.querySelector('[name=supplier_id]').value = supplier_id || '';
+  el.querySelector('[name=sub_id]').value = sub_id || '';
+  el.querySelector('[name=material_id]').value = material_id || '';
+  el.querySelector('[name=notes]').value = notes;
+  openModal('costEditModal');
+}
+</script>
+<div id="costEditModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3>تعديل التكلفة</h3><button class="modal-close" data-close-modal>✕</button></div>
+    <div class="modal-body">
+      <form method="post" class="form-grid">
+        <div class="field"><label>المشروع</label><select name="project_id">
+          <option value="">اختر</option>
+          {% for pr in projects %}<option value="{{ pr.id }}">{{ pr.name }}</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>التاريخ</label><input type="date" name="cost_date"></div>
+        <div class="field"><label>نوع التكلفة</label>
+          <select name="cost_type">
+            {% for t in ['مواد','عمالة','معدات','مقاول باطن','مصروف مباشر','أخرى'] %}
+            <option value="{{ t }}">{{ t }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field"><label>البيان</label><input type="text" name="description"></div>
+        <div class="field"><label>المبلغ</label><input type="number" step="any" name="amount" required></div>
+        <div class="field"><label>الكمية</label><input type="number" step="any" name="quantity"></div>
+        <div class="field"><label>المورد</label><select name="supplier_id">
+          <option value="">—</option>{% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>مقاول الباطن</label><select name="sub_id">
+          <option value="">—</option>{% for s in subs %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>المادة</label><select name="material_id">
+          <option value="">—</option>{% for m in materials %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>ملاحظات</label><input type="text" name="notes"></div>
+        <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">حفظ التعديلات</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% if not can_write() %}<script>window.editCost = function(){};</script>{% endif %}
+{% endblock %}

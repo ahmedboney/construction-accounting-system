@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}العقود{% endblock %}
+{% block page_title %}📜 العقود{% endblock %}
+{% block content %}
+<div class="quick-actions">
+  <a href="/export/contracts" class="btn btn-teal">تصدير العقود (Excel)</a>
+  <a href="/export/contracts?fmt=pdf" class="btn btn-gold">تصدير العقود (PDF)</a>
+</div>
+<div class="cards-grid">
+  <div class="card"><div class="lbl">عدد العقود</div><div class="val gold">{{ contracts|length }}</div></div>
+  <div class="card teal"><div class="lbl">إجمالي قيم العقود</div><div class="val teal">{{ num(contracts|sum(attribute='contract_value')) }}</div></div>
+  <div class="card"><div class="lbl">إجمالي عربون الدفع المقدم</div><div class="val">{{ num(contracts|sum(attribute='advance_amount')) }}</div></div>
+  <div class="card"><div class="lbl">إجمالي الضمانات المحجوزة</div><div class="val red">{{ num(contracts|sum(attribute='retention_amount')) }}</div></div>
+</div>
+<div class="panel">
+  <div class="panel-head"><h3>عقود المشاريع</h3><div class="hint">أضف عقدًا من صفحة تفاصيل المشروع، أو عدّل مشروعًا لربط عقد به.</div></div>
+  <div class="panel-body">
+    {% if contracts %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead>
+        <tr><th>#</th><th>رقم العقد</th><th>المشروع</th><th>العميل</th><th>التاريخ</th><th>قيمة العقد</th><th>العربون المقدم</th><th>الضمان</th><th>تاريخ إفراج الضمان</th><th>المدة (يوم)</th><th>إجراءات</th></tr>
+      </thead>
+      <tbody>
+        {% for c in contracts %}
+        <tr>
+          <td>{{ c.id }}</td>
+          <td><b>{{ c.contract_no or '-' }}</b></td>
+          <td><a href="/projects/{{ c.project_id }}">{{ c.project_name }}</a></td>
+          <td>{{ c.client_name or '-' }}</td>
+          <td>{{ c.contract_date }}</td>
+          <td class="num"><b>{{ num(c.contract_value) }}</b></td>
+          <td class="num">{{ num(c.advance_amount) }}</td>
+          <td class="num">{{ num(c.retention_amount) }}</td>
+          <td>{{ c.retention_release_date or '-' }}</td>
+          <td class="num">{{ c.duration_days }}</td>
+          <td><a href="/projects/{{ c.project_id }}/contract" class="btn btn-dark btn-sm">تعديل</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">📜</div>لا توجد عقود بعد</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}المشاريع{% endblock %}
+{% block page_title %}🏗️ المشاريع{% endblock %}
+{% block content %}
+<div class="quick-actions">
+  {% if can_write() %}<a href="/projects/new" class="btn btn-gold">+ مشروع جديد</a>{% endif %}
+  <a href="/export/projects" class="btn btn-teal">تقرير المشاريع (Excel)</a>
+  <a href="/export/projects?fmt=pdf" class="btn btn-gold">تقرير المشاريع (PDF)</a>
+  <a href="/reports" class="btn btn-dark">التقارير</a>
+</div>
+{% if projects %}
+<div class="projects-grid">
+  {% for p in projects %}
+  <div class="proj-card">
+    <div class="proj-head">
+      <h4><a href="/projects/{{ p.id }}" style="color:inherit;text-decoration:none">{{ p.name }}</a></h4>
+      <span class="status-badge {{ status_class(p.status) }}">{{ p.status }}</span>
+    </div>
+    <div class="proj-meta">
+      <span><span class="k">العميل:</span> <span class="v">{{ p.client_name }}</span></span>
+      <span><span class="k">النوع:</span> <span class="v">{{ p.project_type }}</span></span>
+      <span><span class="k">الموقع:</span> <span class="v">{{ p.location or '-' }}</span></span>
+    </div>
+    <div class="proj-foot">
+      <span class="v" style="font-weight:700">العقد: {{ num(p.contract_value) }}</span>
+      <a href="/projects/{{ p.id }}" class="btn btn-dark btn-sm">التفاصيل</a>
+    </div>
+    <div class="proj-progress"><div style="width:{{ p.progress }}%"></div></div>
+    <div class="proj-stat"><span>التكلفة: {{ num(p.total_cost) }} / محصل: {{ num(p.received) }}</span><b>{{ p.progress }}%</b></div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state"><div class="big">🏗️</div>لا توجد مشاريع بعد</div>
+{% endif %}
+{% endblock %}

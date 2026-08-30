@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}نظام محاسبة المقاولات{% endblock %} — {{ company_name }}</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32.png') }}">
+  <script>document.documentElement.dataset.theme='dark'</script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">م</div>
+      <div>
+        <b>نظام محاسبة المقاولات</b>
+        <small>{{ company_name }}</small>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="/" class="{{ 'active' if request.path == '/' }}"><span class="ic">🏠</span>لوحة التحكم</a>
+      <a href="/projects" class="{{ 'active' if request.path == '/projects' }}"><span class="ic">🏗️</span>المشاريع</a>
+      <a href="/contracts" class="{{ 'active' if request.path == '/contracts' }}"><span class="ic">📜</span>العقود</a>
+      <a href="/interim" class="{{ 'active' if request.path == '/interim' }}"><span class="ic">📋</span>المستخلصات</a>
+      <a href="/costs" class="{{ 'active' if request.path == '/costs' }}"><span class="ic">🧮</span>تكاليف المشاريع</a>
+      {% if user.role == 'admin' or user.role == 'accountant' %}
+      <a href="/payroll" class="{{ 'active' if request.path == '/payroll' }}"><span class="ic">💰</span>مسير الرواتب</a>
+      <a href="/supplier-invoices" class="{{ 'active' if request.path == '/supplier-invoices' }}"><span class="ic">🧾</span>فواتير الموردين</a>
+      <a href="/depreciation" class="{{ 'active' if request.path == '/depreciation' }}"><span class="ic">📉</span>إهلاك المعدات</a>
+      <a href="/custody" class="{{ 'active' if request.path == '/custody' }}"><span class="ic">🔐</span>العهد والأمانات</a>
+      <a href="/monthly" class="{{ 'active' if request.path == '/monthly' }}"><span class="ic">📅</span>الأرباح الشهرية</a>
+      {% endif %}
+      <a href="/stock" class="{{ 'active' if request.path == '/stock' }}"><span class="ic">📦</span>المخازن</a>
+      <a href="/clients" class="{{ 'active' if request.path == '/clients' }}"><span class="ic">🤝</span>العملاء</a>
+      <a href="/suppliers" class="{{ 'active' if request.path == '/suppliers' }}"><span class="ic">🏭</span>الموردون</a>
+      <a href="/subcontractors" class="{{ 'active' if request.path == '/subcontractors' }}"><span class="ic">🧑‍🏭</span>مقاولو الباطن</a>
+      <a href="/equipment" class="{{ 'active' if request.path == '/equipment' }}"><span class="ic">🚜</span>المعدات</a>
+      <a href="/workers" class="{{ 'active' if request.path == '/workers' }}"><span class="ic">👷</span>العمالة</a>
+      <a href="/materials" class="{{ 'active' if request.path == '/materials' }}"><span class="ic">🧱</span>المواد والأصناف</a>
+      <a href="/reports" class="{{ 'active' if request.path == '/reports' }}"><span class="ic">📊</span>التقارير</a>
+      <a href="/aging" class="{{ 'active' if request.path == '/aging' }}"><span class="ic">⏳</span>المتأخرات</a>
+      <a href="/vat" class="{{ 'active' if request.path == '/vat' }}"><span class="ic">🧾</span>ضريبة القيمة المضافة</a>
+      {% if user.role == 'admin' or user.role == 'accountant' %}
+      <a href="/journal" class="{{ 'active' if request.path == '/journal' }}"><span class="ic">📒</span>القيود اليومية</a>
+      <a href="/accounts" class="{{ 'active' if request.path == '/accounts' }}"><span class="ic">📚</span>دليل الحسابات</a>
+      <a href="/accounts/tree" class="{{ 'active' if request.path == '/accounts/tree' }}"><span class="ic">🌳</span>شجرة الحسابات</a>
+      <a href="/ledger" class="{{ 'active' if request.path == '/ledger' }}"><span class="ic">📖</span>الأستاذ العام</a>
+      <a href="/trial-balance" class="{{ 'active' if request.path == '/trial-balance' }}"><span class="ic">⚖️</span>ميزان المراجعة</a>
+      <a href="/financial" class="{{ 'active' if request.path == '/financial' }}"><span class="ic">🏦</span>القوائم المالية</a>
+      <a href="/cashflow" class="{{ 'active' if request.path == '/cashflow' }}"><span class="ic">💵</span>التدفقات النقدية</a>
+      {% endif %}
+      {% if user.role == 'admin' %}
+      <a href="/users" class="{{ 'active' if request.path == '/users' }}"><span class="ic">👥</span>المستخدمون</a>
+      <a href="/audit" class="{{ 'active' if request.path == '/audit' }}"><span class="ic">🛡️</span>سجل العمليات</a>
+      <a href="/backup" class="{{ 'active' if request.path == '/backup' }}"><span class="ic">💾</span>النسخ الاحتياطي</a>
+      {% endif %}
+      {% if not lockdown %}<a href="/settings" class="{{ 'active' if request.path == '/settings' }}"><span class="ic">⚙️</span>الإعدادات</a>{% endif %}
+      <a href="/logout"><span class="ic">🚪</span>تسجيل الخروج</a>
+    </nav>
+    <div class="side-footer">
+      © جميع الحقوق محفوظة<br><b>نظام محاسبة المقاولات</b><br><small>المحاسب / أحمد عبدالله</small>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <h2>{% block page_title %}{% endblock %}</h2>
+      <div class="user-chip">
+        <div class="avatar">{{ user.full_name[0] }}</div>
+        <div>{{ user.full_name }}<span class="role">{{ role_name }}</span></div>
+      </div>
+    </header>
+    <div class="content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="alert {{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </div>
+    <footer class="footer-note">© جميع الحقوق محفوظة — <b>نظام محاسبة المقاولات</b> — المحاسب / أحمد عبدالله</footer>
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

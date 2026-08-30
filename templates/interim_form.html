@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}مستخلص جديد{% endblock %}
+{% block page_title %}📋 مستخلص جديد{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-head"><h3>بيانات المستخلص</h3></div>
+  <div class="panel-body">
+    <form method="post" class="form-grid">
+      <div class="field" style="grid-column:1/-1">
+        <label>المشروع *</label>
+        <select name="project_id" required>
+          <option value="">اختر المشروع</option>
+          {% for pr in projects %}
+          <option value="{{ pr.id }}" {{ 'selected' if request.form.project_id and request.form.project_id|int==pr.id }}>{{ pr.name }}</option>
+          {% endfor %}
+        </select>
+        <span class="hint">نسبة الضمان تُستخرج تلقائياً من عقد المشروع عند الحفظ.</span>
+      </div>
+      <div class="field"><label>رقم المستخلص</label><input type="text" name="payment_no" placeholder="اتركه فارغاً للتلقائي"></div>
+      <div class="field"><label>التاريخ</label><input type="date" name="payment_date" required></div>
+      <div class="field"><label>قيمة الأعمال المنفذة *</label><input type="number" step="any" name="work_value" required></div>
+      <div class="field"><label>نسبة الضمان %</label><input type="number" step="any" name="retention_percent" value="{{ request.form.retention_percent or '' }}"></div>
+      <div class="field"><label>قيمة الضمان</label><input type="number" step="any" name="retention_amount" placeholder="تُحسب تلقائياً لو فاضية"></div>
+      <div class="field"><label>الحالة</label>
+        <select name="status">
+          <option value="مقدم">مقدم</option>
+          <option value="محصل">محصل</option>
+        </select>
+      </div>
+      <div class="field" style="grid-column:1/-1"><label>الوصف</label><input type="text" name="description"></div>
+      <div class="field" style="grid-column:1/-1"><label>ملاحظات</label><textarea name="notes"></textarea></div>
+      <div class="field" style="grid-column:1/-1">
+        <label style="font-size:13px;display:flex;align-items:center;gap:5px;margin-bottom:8px"><input type="checkbox" name="auto_post" checked>ترحيل تلقائي إلى القيود (عملاء + ضمانات ↔ إيراد أعمال)</label>
+        <button class="btn btn-gold" type="submit">حفظ المستخلص</button>
+        <a href="/interim" class="btn btn-dark">إلغاء</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

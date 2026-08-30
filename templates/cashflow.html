@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}التدفقات النقدية{% endblock %}
+{% block page_title %}💵 التدفقات النقدية{% endblock %}
+{% block content %}
+<div class="quick-actions">
+  <a href="/export/cashflow/xlsx" class="btn btn-teal">تصدير التدفقات النقدية (Excel)</a>
+  <a href="/export/cashflow/xlsx?fmt=pdf" class="btn btn-gold">التدفقات النقدية (PDF)</a>
+</div>
+<div class="cards-grid">
+  <div class="card green"><div class="lbl">إجمالي الداخل (إيرادات نقدية)</div><div class="val green">{{ num(inflow) }}</div></div>
+  <div class="card red"><div class="lbl">إجمالي الخارج (مدفوعات نقدية)</div><div class="val red">{{ num(outflow) }}</div></div>
+  <div class="card"><div class="lbl">صافي التدفق النقدي</div><div class="val gold">{{ num(inflow - outflow) }}</div></div>
+</div>
+<div class="panel">
+  <div class="panel-head"><h3>حركات النقد (الصندوق والبنوك)</h3></div>
+  <div class="panel-body">
+    {% if cash_flows %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>الرقم</th><th>التاريخ</th><th>البيان</th><th>المشروع</th><th>داخل</th><th>خارج</th></tr></thead>
+      <tbody>
+        {% for cf in cash_flows %}
+        <tr>
+          <td><b>{{ cf.movement_no }}</b></td><td>{{ cf.entry_date }}</td><td>{{ cf.description }}</td>
+          <td>{{ cf.project_name or '-' }}</td>
+          <td class="num">{% if cf.flow > 0 %}<b class="amt-d">{{ num(cf.flow) }}</b>{% else %}-{% endif %}</td>
+          <td class="num">{% if cf.flow < 0 %}<b class="amt-c">{{ num(-cf.flow) }}</b>{% else %}-{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">💵</div>لا توجد حركات نقدية</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}القوائم المالية{% endblock %}
+{% block page_title %}🏦 القوائم المالية{% endblock %}
+{% block content %}
+<div class="quick-actions">
+  <a href="/export/income" class="btn btn-teal">تصدير قائمة الدخل (Excel)</a>
+  <a href="/export/income?fmt=pdf" class="btn btn-gold">قائمة الدخل (PDF)</a>
+  <a href="/export/balance" class="btn btn-teal">تصدير المركز المالي (Excel)</a>
+  <a href="/export/balance?fmt=pdf" class="btn btn-gold">المركز المالي (PDF)</a>
+</div>
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-head"><h3>قائمة الدخل</h3></div>
+    <div class="panel-body">
+      <table class="tbl">
+        <thead><tr><th>الحساب</th><th>المبلغ</th></tr></thead>
+        <tbody>
+          {% for k, name, v in income_rows %}<tr><td>{{ name }}</td><td class="num">{{ num(v) }}</td></tr>{% endfor %}
+          <tr class="total-row"><td colspan="1">إجمالي الإيرادات</td><td class="num">{{ num(total_income) }}</td></tr>
+          {% for k, name, v in expense_rows %}<tr><td>{{ name }}</td><td class="num">{{ num(v) }}</td></tr>{% endfor %}
+          <tr class="total-row"><td>إجمالي المصروفات</td><td class="num">{{ num(total_expense) }}</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td>صافي الدخل</td><td class="num">{{ num(net_income) }}</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h3>الميزانية العمومية</h3></div>
+    <div class="panel-body">
+      <table class="tbl">
+        <thead><tr><th>الحساب</th><th>المبلغ</th></tr></thead>
+        <tbody>
+          {% for k, name, v in asset_rows %}<tr><td>{{ name }}</td><td class="num">{{ num(v) }}</td></tr>{% endfor %}
+          <tr class="total-row"><td>إجمالي الأصول</td><td class="num">{{ num(total_assets) }}</td></tr>
+          {% for k, name, v in liability_rows %}<tr><td>{{ name }}</td><td class="num">{{ num(v) }}</td></tr>{% endfor %}
+          <tr class="total-row"><td>إجمالي الخصوم</td><td class="num">{{ num(total_liabs) }}</td></tr>
+          {% for k, name, v in equity_rows %}<tr><td>{{ name }}</td><td class="num">{{ num(v) }}</td></tr>{% endfor %}
+          <tr class="total-row"><td>إجمالي حقوق الملكية</td><td class="num">{{ num(total_equity) }}</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td>إجمالي الخصوم + حقوق الملكية</td><td class="num">{{ num(total_liabs + total_equity) }}</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

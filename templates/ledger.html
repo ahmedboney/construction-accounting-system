@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}الأستاذ العام{% endblock %}
+{% block page_title %}📖 الأستاذ العام{% endblock %}
+{% block content %}
+<div class="quick-actions">
+  <form method="get" action="/export/ledger" class="toolbar" style="align-items:center">
+    <div class="field" style="margin:0;min-width:240px">
+      <label style="font-size:11.5px">تصدير كشف حساب تفصيلي لحساب معين</label>
+      <select name="account_id">
+        {% for a in accounts %}<option value="{{ a.id }}">{{ a.acc_no }} — {{ a.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-teal btn-sm" formaction="/export/ledger">تصدير الكشف (Excel)</button>
+    <button class="btn btn-gold btn-sm" formaction="/export/ledger?fmt=pdf">تصدير الكشف (PDF)</button>
+  </form>
+</div>
+<div class="panel">
+  <div class="panel-head"><h3>الأستاذ العام — ملخص الحسابات</h3></div>
+  <div class="panel-body">
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>الرقم</th><th>الحساب</th><th>النوع</th><th>رصيد افتتاحي</th><th>إجمالي مدين</th><th>إجمالي دائن</th><th>الرصيد</th></tr></thead>
+      <tbody>
+        {% for a in accounts %}
+        <tr>
+          <td class="num"><b>{{ a.acc_no }}</b></td><td>{{ a.name }}</td><td>{{ a.type }}</td>
+          <td class="num">{{ num(a.opening_balance) }}</td>
+          <td class="num">{{ num(a.total_d) }}</td><td class="num">{{ num(a.total_c) }}</td>
+          <td class="num"><b>{{ num(a.balance) }}</b></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</div>
+{% endblock %}

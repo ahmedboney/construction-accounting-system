@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}العهد والأمانات{% endblock %}
+{% block page_title %}🔐 العهد والأمانات{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-head"><h3>إنشاء عهدة</h3></div>
+  <div class="panel-body">
+    {% if can_write() %}
+    <form method="post" action="/custody/add" class="form-grid">
+      <div class="field"><label>المسؤول *</label><input type="text" name="custodian" required placeholder="اسم المسؤول عن العهدة"></div>
+      <div class="field"><label>المشروع</label><select name="project_id"><option value="">— بدون —</option>
+        {% for p in projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+      </select></div>
+      <div class="field"><label>المبلغ المخوّل *</label><input type="number" step="any" name="amount" required></div>
+      <div class="field" style="grid-column:1/-1"><label>ملاحظات</label><input type="text" name="notes"></div>
+      <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">إنشاء العهدة</button></div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel" style="margin-top:18px">
+  <div class="panel-head"><h3>سجل العهد</h3>
+    <div class="quick-actions">
+      <a href="/export/custody" class="btn btn-teal btn-sm">تصدير (Excel)</a>
+      <a href="/export/custody?fmt=pdf" class="btn btn-gold btn-sm">تصدير (PDF)</a>
+    </div>
+  </div>
+  <div class="panel-body">
+    {% if rows %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>المسؤول</th><th>المشروع</th><th>المبلغ المخوّل</th><th>المصروف</th><th>المسدد</th><th>الرصيد المتبقي</th><th>الملاحظات</th>{% if can_write() %}<th>إجراءات</th>{% endif %}</tr></thead>
+      <tbody>
+        {% for c in rows %}
+        <tr>
+          <td><b>{{ c.custodian }}</b></td>
+          <td>{{ c.project_name or '-' }}</td>
+          <td class="num">{{ num(c.amount) }}</td>
+          <td class="num">{{ num(c.spent) }}</td>
+          <td class="num">{{ num(c.refunded) }}</td>
+          <td class="num"><b class="{{ 'amt-d' if c.remaining>=0 else 'amt-c' }}">{{ num(c.remaining) }}</b></td>
+          <td>{{ c.notes or '-' }}</td>
+          {% if can_write() %}
+          <td>
+            <div class="toolbar">
+              <button class="btn btn-dark btn-sm" onclick="showOp({{ c.id }}, '{{ c.custodian|e }}', 'صرف')">صرف</button>
+              <button class="btn btn-teal btn-sm" onclick="showOp({{ c.id }}, '{{ c.custodian|e }}', 'سداد')">سداد</button>
+              <form method="post" action="/custody/{{ c.id }}/delete" onsubmit="return confirm('حذف العهدة وكل عملياتها؟')"><button class="btn btn-red btn-sm">حذف</button></form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">🔐</div>لا توجد عهد بعد</div>{% endif %}
+  </div>
+</div>
+
+<div id="custOpModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="custOpTitle">عملية عهدة</h3><button class="modal-close" data-close-modal>✕</button></div>
+    <div class="modal-body">
+      <form method="post" class="form-grid">
+        <input type="hidden" name="op_type" id="custOpType">
+        <div class="field" style="grid-column:1/-1"><label>المبلغ</label><input type="number" step="any" name="amount" required></div>
+        <div class="field"><label>التاريخ</label><input type="date" name="op_date"></div>
+        <div class="field"><label>ملاحظات</label><input type="text" name="notes"></div>
+        <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">تسجيل العملية</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function showOp(id, custodian, type){
+  const el = $('#custOpModal');
+  el.querySelector('form').action = '/custody/' + id + '/op';
+  el.querySelector('[name=op_type]').value = type;
+  $('#custOpTitle').textContent = (type === 'صرف' ? 'صرف من عهدة ' : 'سداد عهدة ') + custodian;
+  const d = new Date().toISOString().slice(0,10);
+  el.querySelector('[name=op_date]').value = d;
+  el.querySelector('[name=amount]').value = '';
+  el.querySelector('[name=notes]').value = '';
+  openModal('custOpModal');
+}
+</script>
+{% if not can_write() %}<script>window.showOp = function(){};</script>{% endif %}
+{% endblock %}

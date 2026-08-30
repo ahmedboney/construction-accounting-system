@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}شجرة الحسابات{% endblock %}
+{% block page_title %}🌳 شجرة الحسابات{% endblock %}
+{% block content %}
+<div class="quick-actions">
+  <a href="/accounts" class="btn btn-dark">دليل الحسابات (جدول)</a>
+  {% if can_write() %}
+  <form method="post" action="/accounts/reset" onsubmit="return confirm('⚠️ تحذير: سيتم حذف شجرة الحسابات بالكامل وكل القيود وسجل الدفاتر نهائيًا ولا يمكن التراجع. هل أنت متأكد؟')">
+    <button class="btn btn-red">🗑 حذف الشجرة نهائيًا</button>
+  </form>
+  {% endif %}
+</div>
+<div class="panel">
+  <div class="panel-head"><h3>شجرة الحسابات</h3></div>
+  <div class="panel-body">
+    {% set types = ['أصول','خصوم','حقوق ملكية','إيرادات','مصروفات','أخرى'] %}
+    <div class="tree-container">
+      {% for t in types %}
+      {% set taccs = accounts | selectattr('type','equalto',t) | list %}
+      {% if taccs %}
+      <div class="tree-node tree-type">
+        <div class="tree-row" onclick="toggleTree(this)"><span class="tw-arrow">▾</span><span class="tw-icon">📁</span><b>{{ t }}</b><span class="tw-count">{{ taccs|length }}</span></div>
+        <div class="tree-children">
+          {% for a in taccs %}
+          <div class="tree-node tree-account">
+            <div class="tree-row" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;cursor:default">
+              <span class="tw-arrow tw-leaf">•</span><span class="tw-no">{{ a.acc_no }}</span><span>{{ a.name }}</span>
+              {% if can_write() %}
+              <span class="toolbar" style="margin-inline-start:auto">
+                <button class="btn btn-dark btn-sm" onclick="editAcc({{ a.id }}, '{{ a.acc_no|e }}', '{{ a.name|e }}', '{{ a.type|e }}', {{ a.opening_balance }})">تعديل</button>
+                <form method="post" action="/accounts/{{ a.id }}/delete" onsubmit="return confirm('حذف الحساب؟')"><button class="btn btn-red btn-sm">حذف</button></form>
+              </span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function toggleTree(el){
+  const ch = el.nextElementSibling;
+  if (ch){ const hidden = ch.style.display === 'none'; ch.style.display = hidden ? '' : 'none'; el.querySelector('.tw-arrow').textContent = hidden ? '▾' : '▸'; }
+}
+function editAcc(id, no, name, type, ob){
+  const el = $('#editModal');
+  el.querySelector('form').action = '/accounts/' + id + '/edit';
+  el.querySelector('[name=acc_no]').value = no;
+  el.querySelector('[name=name]').value = name;
+  el.querySelector('[name=type]').value = type;
+  el.querySelector('[name=opening_balance]').value = ob;
+  openModal('editModal');
+}
+</script>
+<div id="editModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3>تعديل الحساب</h3><button class="modal-close" data-close-modal>✕</button></div>
+    <div class="modal-body">
+      <form method="post" class="form-grid">
+        <div class="field"><label>رقم الحساب</label><input type="text" name="acc_no" required></div>
+        <div class="field"><label>اسم الحساب</label><input type="text" name="name" required></div>
+        <div class="field"><label>النوع</label>
+          <select name="type">{% for t in types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}</select>
+        </div>
+        <div class="field"><label>رصيد افتتاحي</label><input type="number" step="any" name="opening_balance"></div>
+        <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">حفظ</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% if not can_write() %}<script>window.editAcc = function(){};</script>{% endif %}
+{% endblock %}

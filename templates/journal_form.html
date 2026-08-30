@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{% if entry %}تعديل قيد{% else %}قيد جديد{% endif %}{% endblock %}
+{% block page_title %}{% if entry %}📒 تعديل قيد {{ entry.movement_no }}{% else %}📒 قيد يومية جديد{% endif %}{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-head"><h3>رأس القيد</h3></div>
+  <div class="panel-body">
+    <form method="post" action="{% if entry %}/journal/{{ entry.id }}/edit{% else %}/journal/new{% endif %}">
+      <div class="entry-meta">
+        <div class="field"><label>التاريخ *</label><input type="date" name="entry_date" value="{{ entry.entry_date if entry }}" required></div>
+        <div class="field"><label>البيان *</label><input type="text" name="description" value="{{ entry.description if entry }}" required></div>
+        <div class="field"><label>نوع القيد</label>
+          <select name="entry_type">{% for t in entry_types %}<option value="{{ t }}" {% if entry and entry.entry_type==t %}selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+        </div>
+        <div class="field"><label>المشروع (اختياري)</label>
+          <select name="project_id"><option value="">—</option>
+          {% for pr in projects %}<option value="{{ pr.id }}" {% if entry and entry.project_id==pr.id %}selected{% endif %}>{{ pr.name }}</option>{% endfor %}</select>
+        </div>
+      </div>
+      <div class="lines-editor">
+        <table>
+          <thead><tr><th style="width:40%">الحساب</th><th style="width:20%">مدين</th><th style="width:20%">دائن</th><th style="width:8%"></th></tr></thead>
+          <tbody id="linesBody">
+            {% set line_rows = entry.lines if (entry and entry.lines) else [None] %}
+            {% for ln in line_rows %}
+            <tr>
+              <td><select name="account_id[]" class="acc-sel" required>
+                {% for a in accounts %}<option value="{{ a.id }}" {% if ln and ln.account_id==a.id %}selected{% endif %}>{{ a.acc_no }} — {{ a.name }}</option>{% endfor %}
+              </select></td>
+              <td><input type="number" step="any" name="debit[]" class="debit" value="{{ '%.2f' % (ln.debit or 0) if ln }}" oninput="recalc()"></td>
+              <td><input type="number" step="any" name="credit[]" class="credit" value="{{ '%.2f' % (ln.credit or 0) if ln }}" oninput="recalc()"></td>
+              <td><button type="button" class="line-del" onclick="delLine(this)">✕</button></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="entry-totals">
+        <span>مدين: <b id="tDebit">0.00</b></span>
+        <span>دائن: <b id="tCredit">0.00</b></span>
+        <span id="diffBox" class="diff-ok">متوازن ✔</span>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-dark" type="button" onclick="addLine()">+ إضافة سطر</button>
+        <button class="btn btn-gold" type="submit">{% if entry %}حفظ التعديلات{% else %}ترحيل القيد{% endif %}</button>
+        <a href="/journal" class="btn btn-dark">إلغاء</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function addLine(){
+  const tbody = $('#linesBody');
+  const row = document.createElement('tr');
+  const first = tbody.querySelector('select');
+  const selOpts = first.innerHTML;
+  row.innerHTML = `
+    <td><select name="account_id[]" class="acc-sel" required>${selOpts}</select></td>
+    <td><input type="number" step="any" name="debit[]" class="debit" oninput="recalc()"></td>
+    <td><input type="number" step="any" name="credit[]" class="credit" oninput="recalc()"></td>
+    <td><button type="button" class="line-del" onclick="delLine(this)">✕</button></td>`;
+  tbody.appendChild(row);
+  recalc();
+}
+function delLine(btn){
+  const body = $('#linesBody');
+  if (body.children.length <= 1) return;
+  btn.closest('tr').remove();
+  recalc();
+}
+function recalc(){
+  let d = 0, c = 0;
+  $$('.debit').forEach(i => d += parseFloat(i.value || 0));
+  $$('.credit').forEach(i => c += parseFloat(i.value || 0));
+  $('#tDebit').textContent = d.toLocaleString('en-US', {minimumFractionDigits:2});
+  $('#tCredit').textContent = c.toLocaleString('en-US', {minimumFractionDigits:2});
+  const box = $('#diffBox');
+  if (Math.abs(d - c) < 0.01){ box.className = 'diff-ok'; box.textContent = 'متوازن ✔'; }
+  else { box.className = 'diff-bad'; box.textContent = `فرق: ${(d-c).toLocaleString('en-US', {minimumFractionDigits:2})}`; }
+}
+window.addEventListener('DOMContentLoaded', recalc);
+</script>
+{% endblock %}

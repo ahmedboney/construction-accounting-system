@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}ميزان المراجعة{% endblock %}
+{% block page_title %}⚖️ ميزان المراجعة{% endblock %}
+{% block content %}
+<div class="quick-actions">
+  <a href="/export/trial-balance" class="btn btn-teal">تصدير ميزان المراجعة (Excel)</a>
+  <a href="/export/trial-balance?fmt=pdf" class="btn btn-gold">ميزان المراجعة (PDF)</a>
+</div>
+<div class="panel">
+  <div class="panel-head"><h3>ميزان المراجعة</h3></div>
+  <div class="panel-body">
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>الرقم</th><th>الحساب</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
+      <tbody>
+        {% for a in rows %}
+        <tr>
+          <td class="num"><b>{{ a.acc_no }}</b></td><td>{{ a.name }}</td>
+          <td class="num">{{ num(a.total_d) }}</td><td class="num">{{ num(a.total_c) }}</td>
+          <td class="num">{{ num(a.balance) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><td colspan="2">الإجمالي</td><td class="num">{{ num(t_d) }}</td><td class="num">{{ num(t_c) }}</td><td class="num"></td></tr>
+      </tfoot>
+    </table></div>
+  </div>
+</div>
+{% endblock %}

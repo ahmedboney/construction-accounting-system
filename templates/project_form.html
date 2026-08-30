@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ 'تعديل مشروع' if is_edit else 'مشروع جديد' }}{% endblock %}
+{% block page_title %}{{ 'تعديل مشروع' if is_edit else 'مشروع جديد' }}{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-head"><h3>بيانات المشروع</h3></div>
+  <div class="panel-body">
+    <form method="post" class="form-grid">
+      <div class="field" style="grid-column:1/-1">
+        <label>اسم المشروع *</label>
+        <input type="text" name="name" required value="{{ project.name if project and project.name else '' }}">
+      </div>
+      <div class="field">
+        <label>العميل / المالك</label>
+        <select name="client_id">
+          <option value="">— لا يوجد —</option>
+          {% for c in clients %}
+          <option value="{{ c.id }}" {{ 'selected' if project and project.client_id==c.id }}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label>نوع المشروع</label>
+        <select name="project_type">
+          {% for t in ['مباني','بنية تحتية','طرق وجسور','صيانة','أخرى'] %}
+          <option value="{{ t }}" {{ 'selected' if project and project.project_type==t }}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label>الموقع</label>
+        <input type="text" name="location" value="{{ project.location if project else '' }}">
+      </div>
+      <div class="field">
+        <label>المهندس الاستشاري</label>
+        <input type="text" name="engineer" value="{{ project.engineer if project else '' }}">
+      </div>
+      <div class="field">
+        <label>مهندس الإشراف</label>
+        <input type="text" name="supervisor" value="{{ project.supervisor if project else '' }}">
+      </div>
+      <div class="field">
+        <label>تاريخ البداية</label>
+        <input type="date" name="start_date" value="{{ project.start_date if project else '' }}">
+      </div>
+      <div class="field">
+        <label>تاريخ النهاية</label>
+        <input type="date" name="end_date" value="{{ project.end_date if project else '' }}">
+      </div>
+      <div class="field">
+        <label>الحالة</label>
+        <select name="status">
+          {% for s in ['تحضيري','جاري','مكتمل','مؤجل','ملغي'] %}
+          <option value="{{ s }}" {{ 'selected' if project and project.status==s }}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field" style="grid-column:1/-1">
+        <label>ملاحظات</label>
+        <textarea name="notes">{{ project.notes if project else '' }}</textarea>
+      </div>
+      <div class="field" style="grid-column:1/-1">
+        <button class="btn btn-gold" type="submit">{{ 'حفظ' if is_edit else 'إنشاء المشروع' }}</button>
+        <a href="{{ '/projects/' ~ project.id if is_edit else '/projects' }}" class="btn btn-dark">إلغاء</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
