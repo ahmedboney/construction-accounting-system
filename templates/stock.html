@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}المخازن{% endblock %}
+{% block page_title %}📦 المخازن والمواد{% endblock %}
+{% block content %}
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-head"><h3>تسجيل حركة مخزن</h3></div>
+    <div class="panel-body">
+      {% if can_write() %}
+      <form method="post" action="/stock/move" class="form-grid">
+        <div class="field"><label>المادة *</label><select name="material_id" required>
+          {% for m in materials %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>نوع الحركة</label>
+          <select name="movement_type"><option value="إدخال">إدخال (استلام)</option><option value="صرف">صرف</option></select>
+        </div>
+        <div class="field"><label>الكمية *</label><input type="number" step="any" name="quantity" required></div>
+        <div class="field"><label>سعر الوحدة</label><input type="number" step="any" name="unit_price"></div>
+        <div class="field"><label>التاريخ</label><input type="date" name="movement_date" required></div>
+        <div class="field"><label>المشروع (للصرف)</label><select name="project_id">
+          <option value="">—</option>{% for pr in projects %}<option value="{{ pr.id }}">{{ pr.name }}</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>المورد (للإدخال)</label><select name="supplier_id">
+          <option value="">—</option>{% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>المرجع</label><input type="text" name="reference"></div>
+        <div class="field"><label>ملاحظات</label><input type="text" name="notes"></div>
+        <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">تسجيل الحركة</button></div>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h3>أرصدة المخزن</h3><a href="/materials" class="btn btn-dark btn-sm">المواد</a></div>
+    <div class="panel-body">
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>المادة</th><th>الوحدة</th><th>الرصيد</th><th>حد أدنى</th><th>الحالة</th></tr></thead>
+        <tbody>
+          {% for s in stock_rows %}
+          <tr>
+            <td>{{ s.name }}</td><td>{{ s.unit }}</td>
+            <td class="num"><b>{{ num(s.balance) }}</b></td><td class="num">{{ num(s.min_stock) }}</td>
+            <td>{% if s.low %}<span class="status-badge status-mawquf">منخفض</span>{% else %}<span class="status-badge status-mukmal">متوفر</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:18px">
+  <div class="panel-head"><h3>سجل حركة المخزن</h3>
+    <div class="toolbar">
+      <a href="/export/stock" class="btn btn-teal btn-sm">تصدير (Excel)</a>
+      <a href="/export/stock?fmt=pdf" class="btn btn-gold btn-sm">تصدير (PDF)</a>
+    </div>
+  </div>
+  <div class="panel-body">
+    {% if movements %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>التاريخ</th><th>المادة</th><th>النوع</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th>المشروع</th><th>المورد</th><th>المرجع</th>{% if can_write() %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for mv in movements %}
+        <tr>
+          <td>{{ mv.movement_date }}</td><td>{{ mv.material_name }}</td>
+          <td><span class="status-badge {{ 'status-mukmal' if mv.movement_type=='إدخال' else 'status-mawquf' }}">{{ mv.movement_type }}</span></td>
+          <td class="num">{{ num(mv.quantity) }}</td><td class="num">{{ num(mv.unit_price) }}</td>
+          <td class="num">{{ num(mv.total) }}</td><td>{{ mv.project_name }}</td><td>{{ mv.supplier_name }}</td>
+          <td>{{ mv.reference }}</td>
+          {% if can_write() %}
+          <td>
+            <div class="toolbar">
+              <button class="btn btn-dark btn-sm" onclick="editMove({{ mv.id }}, {{ mv.material_id or 'null' }}, {{ mv.project_id or 'null' }}, '{{ (mv.movement_date or '')|e }}', '{{ (mv.movement_type or '')|e }}', {{ mv.quantity or 0 }}, {{ mv.unit_price or 0 }}, {{ mv.supplier_id or 'null' }}, '{{ (mv.reference or '')|e }}', '{{ (mv.notes or '')|e }}')">تعديل</button>
+              <form method="post" action="/stock/{{ mv.id }}/delete" onsubmit="return confirm('حذف؟')"><button class="btn btn-red btn-sm">حذف</button></form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">📦</div>لا توجد حركات</div>{% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function editMove(id, material_id, project_id, movement_date, movement_type, quantity, unit_price, supplier_id, reference, notes){
+  const el = $('#moveEditModal');
+  el.querySelector('form').action = '/stock/' + id + '/edit';
+  el.querySelector('[name=material_id]').value = material_id || '';
+  el.querySelector('[name=project_id]').value = project_id || '';
+  el.querySelector('[name=movement_date]').value = movement_date;
+  el.querySelector('[name=movement_type]').value = movement_type;
+  el.querySelector('[name=quantity]').value = quantity;
+  el.querySelector('[name=unit_price]').value = unit_price;
+  el.querySelector('[name=supplier_id]').value = supplier_id || '';
+  el.querySelector('[name=reference]').value = reference;
+  el.querySelector('[name=notes]').value = notes;
+  openModal('moveEditModal');
+}
+</script>
+<div id="moveEditModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3>تعديل حركة المخزن</h3><button class="modal-close" data-close-modal>✕</button></div>
+    <div class="modal-body">
+      <form method="post" class="form-grid">
+        <div class="field"><label>المادة</label><select name="material_id" required>
+          {% for m in materials %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>نوع الحركة</label>
+          <select name="movement_type"><option value="إدخال">إدخال (استلام)</option><option value="صرف">صرف</option></select>
+        </div>
+        <div class="field"><label>الكمية</label><input type="number" step="any" name="quantity" required></div>
+        <div class="field"><label>سعر الوحدة</label><input type="number" step="any" name="unit_price"></div>
+        <div class="field"><label>التاريخ</label><input type="date" name="movement_date"></div>
+        <div class="field"><label>المشروع</label><select name="project_id">
+          <option value="">—</option>{% for pr in projects %}<option value="{{ pr.id }}">{{ pr.name }}</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>المورد</label><select name="supplier_id">
+          <option value="">—</option>{% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>المرجع</label><input type="text" name="reference"></div>
+        <div class="field" style="grid-column:1/-1"><input type="text" name="notes" placeholder="ملاحظات"></div>
+        <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">حفظ التعديلات</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% if not can_write() %}<script>window.editMove = function(){};</script>{% endif %}
+{% endblock %}

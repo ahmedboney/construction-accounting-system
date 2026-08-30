@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}قائمة{% endblock %}
+{% block page_title %}📋 قائمة{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-head"><h3>السجلات</h3></div>
+  <div class="panel-body">
+    {% if items %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead>
+        <tr>
+          <th>#</th>
+          {% for c in cols %}<th>{{ c }}</th>{% endfor %}
+          <th>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in items %}
+        <tr>
+          <td>{{ it.id }}</td>
+          {% for k in cols %}<td>{{ it[k] }}</td>{% endfor %}
+          <td>
+            <div class="toolbar">
+              <a href="/{{ table }}/{{ it.id }}/edit" class="btn btn-dark btn-sm">تعديل</a>
+              <form method="post" action="/{{ table }}/{{ it.id }}/delete" onsubmit="return confirm('تأكيد الحذف؟')">
+                <button class="btn btn-red btn-sm">حذف</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">📭</div>لا توجد بيانات بعد</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

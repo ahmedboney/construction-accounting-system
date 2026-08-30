@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}كشف المتأخرات{% endblock %}
+{% block page_title %}⏳ كشف المتأخرات{% endblock %}
+{% block content %}
+<div class="cards-grid">
+  <div class="card"><div class="lbl">مستحق لنا على العملاء</div><div class="val gold">{{ num(totals.clients) }}</div></div>
+  <div class="card red"><div class="lbl">مستحق للموردين</div><div class="val red">{{ num(totals.suppliers) }}</div></div>
+  <div class="card"><div class="lbl">الإجمالي</div><div class="val teal">{{ num(totals.clients + totals.suppliers) }}</div></div>
+</div>
+
+<div class="quick-actions" style="margin-top:14px">
+  <a href="/export/aging" class="btn btn-teal">تصدير (Excel)</a>
+  <a href="/export/aging?fmt=pdf" class="btn btn-gold">تصدير (PDF)</a>
+</div>
+
+<div class="panel" style="margin-top:16px">
+  <div class="panel-head"><h3>تفصيل المتأخرات حسب الفترات</h3></div>
+  <div class="panel-body">
+    {% if rows %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>الجهة</th><th>الطرف</th><th>البيان</th><th>الإجمالي</th><th>حتى 30 يومًا</th><th>31–60 يوم</th><th>61–90 يوم</th><th>أكثر من 90 يوم</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td><span class="status-badge {{ 'status-mukmal' if r[0]=='عميل' else 'status-jari' }}">{{ r[0] }}</span></td>
+          <td><b>{{ r[1] }}</b></td>
+          <td>{{ r[2] }}</td>
+          <td class="num"><b>{{ num(r[3]) }}</b></td>
+          <td class="num">{{ num(r[4][0]) }}</td>
+          <td class="num">{{ num(r[4][1]) }}</td>
+          <td class="num">{{ num(r[4][2]) }}</td>
+          <td class="num {{ 'amt-c' if r[4][3]>0.01 }}">{{ num(r[4][3]) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td colspan="3">الإجمالي</td>
+        <td class="num">{{ num(totals.clients + totals.suppliers) }}</td>
+        <td class="num">{{ num(totals.buckets[0]) }}</td>
+        <td class="num">{{ num(totals.buckets[1]) }}</td>
+        <td class="num">{{ num(totals.buckets[2]) }}</td>
+        <td class="num">{{ num(totals.buckets[3]) }}</td></tr></tfoot>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">⏳</div>لا توجد متأخرات — كل المستخلصات محصلة والفواتير مسددة</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

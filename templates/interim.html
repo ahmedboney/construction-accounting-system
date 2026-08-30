@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}المستخلصات{% endblock %}
+{% block page_title %}📋 المستخلصات{% endblock %}
+{% block content %}
+<div class="cards-grid">
+  <div class="card"><div class="lbl">إجمالي قيم الأعمال</div><div class="val gold">{{ num(total_work) }}</div></div>
+  <div class="card"><div class="lbl">إجمالي المستخلصات الصافية</div><div class="val teal">{{ num(total_net) }}</div></div>
+  <div class="card green"><div class="lbl">إجمالي المحصل</div><div class="val green">{{ num(total_recv) }}</div></div>
+</div>
+<div class="quick-actions">
+  {% if can_write() %}<a href="/interim/new" class="btn btn-gold">+ مستخلص جديد</a>{% endif %}
+  <a href="/export/interim" class="btn btn-teal">تصدير الكل (Excel)</a>
+  <a href="/export/interim?fmt=pdf" class="btn btn-gold">تصدير الكل (PDF)</a>
+</div>
+<div class="panel">
+  <div class="panel-head"><h3>كشوف المستخلصات</h3></div>
+  <div class="panel-body">
+    {% if rows %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead>
+        <tr><th>الرقم</th><th>المشروع</th><th>التاريخ</th><th>قيمة الأعمال</th><th>الضمان</th><th>المستخلصات السابقة</th><th>الصافي</th><th>المحصل</th><th>الحالة</th>{% if can_write() %}<th>إجراءات</th>{% endif %}</tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td><b>{{ r.payment_no }}</b></td>
+          <td><a href="/projects/{{ r.project_id }}">{{ r.project_name }}</a></td>
+          <td>{{ r.payment_date }}</td>
+          <td class="num">{{ num(r.work_value) }}</td>
+          <td class="num">{{ num(r.retention_amount) }}</td>
+          <td class="num">{{ num(r.previous_payments) }}</td>
+          <td class="num"><b>{{ num(r.net_payment) }}</b></td>
+          <td class="num">{{ num(r.actual_received) }}</td>
+          <td><span class="status-badge {{ 'status-mukmal' if r.status=='محصل' else 'status-jari' }}">{{ r.status }}</span></td>
+          {% if can_write() %}
+          <td>
+            <div class="toolbar">
+              {% if r.status != 'محصل' %}
+              <form method="post" action="/interim/{{ r.id }}/receive" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+                <input type="number" step="any" name="amount" value="{{ r.net_payment }}" style="width:100px;padding:5px 8px">
+                <input type="date" name="receive_date" style="width:120px;padding:5px 8px">
+                <label style="font-size:12px;display:flex;align-items:center;gap:3px"><input type="checkbox" name="auto_post" checked>ترحيل</label>
+                <button class="btn btn-teal btn-sm">تحصيل</button>
+              </form>
+              {% endif %}
+              <a class="btn btn-purple btn-sm" target="_blank" href="/interim/{{ r.id }}/print">طباعة</a>
+              <a class="btn btn-gold btn-sm" target="_blank" href="/interim/{{ r.id }}/print?fmt=pdf">PDF</a>
+              <button class="btn btn-dark btn-sm" onclick="editInterim({{ r.id }}, '{{ (r.payment_no or '')|e }}', '{{ (r.payment_date or '')|e }}', '{{ (r.description or '')|e }}', {{ r.work_value }}, {{ r.retention_percent or 0 }}, {{ r.retention_amount }}, {{ r.previous_payments or 0 }}, {{ r.net_payment }}, '{{ (r.status or '')|e }}', '{{ (r.notes or '')|e }}')">تعديل</button>
+              <form method="post" action="/interim/{{ r.id }}/delete" onsubmit="return confirm('حذف المستخلص؟')">
+                <button class="btn btn-red btn-sm">حذف</button>
+              </form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">📋</div>لا توجد مستخلصات</div>{% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function editInterim(id, payment_no, payment_date, description, work_value, ret_pct, ret_amt, prev, net, status, notes){
+  const el = $('#interimEditModal');
+  el.querySelector('form').action = '/interim/' + id + '/edit';
+  el.querySelector('[name=payment_no]').value = payment_no;
+  el.querySelector('[name=payment_date]').value = payment_date;
+  el.querySelector('[name=description]').value = description;
+  el.querySelector('[name=work_value]').value = work_value;
+  el.querySelector('[name=retention_percent]').value = ret_pct;
+  el.querySelector('[name=retention_amount]').value = ret_amt;
+  el.querySelector('[name=previous_payments]').value = prev;
+  el.querySelector('[name=net_payment]').value = net;
+  el.querySelector('[name=status]').value = status;
+  el.querySelector('[name=notes]').value = notes;
+  openModal('interimEditModal');
+}
+</script>
+<div id="interimEditModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3>تعديل المستخلص</h3><button class="modal-close" data-close-modal>✕</button></div>
+    <div class="modal-body">
+      <form method="post" class="form-grid">
+        <div class="field"><label>رقم المستخلص</label><input type="text" name="payment_no"></div>
+        <div class="field"><label>التاريخ</label><input type="date" name="payment_date"></div>
+        <div class="field" style="grid-column:1/-1"><label>البيان</label><input type="text" name="description"></div>
+        <div class="field"><label>قيمة الأعمال *</label><input type="number" step="any" name="work_value" required></div>
+        <div class="field"><label>نسبة الضمان %</label><input type="number" step="any" name="retention_percent"></div>
+        <div class="field"><label>قيمة الضمان</label><input type="number" step="any" name="retention_amount"></div>
+        <div class="field"><label>المستخلصات السابقة</label><input type="number" step="any" name="previous_payments"></div>
+        <div class="field"><label>الصافي (يُحسب تلقائيًا)</label><input type="number" step="any" name="net_payment"></div>
+        <div class="field"><label>الحالة</label>
+          <select name="status"><option>مقدم</option><option>محصل</option><option>معتمد</option></select>
+        </div>
+        <div class="field" style="grid-column:1/-1"><label>ملاحظات</label><input type="text" name="notes"></div>
+        <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">حفظ التعديلات</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% if not can_write() %}<script>window.editInterim = function(){};</script>{% endif %}
+{% endblock %}

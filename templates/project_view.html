@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% block title %}{{ p.name }}{% endblock %}
+{% block page_title %}{{ p.name }} — <span class="status-badge {{ status_class(p.status) }}">{{ p.status }}</span>{% endblock %}
+{% block content %}
+<div class="toolbar" style="margin-bottom:18px">
+  {% if can_write() %}<a href="/projects/{{ p.id }}/edit" class="btn btn-dark">تعديل المشروع</a>
+  <a href="/projects/{{ p.id }}/contract" class="btn btn-teal">العقد</a>{% endif %}
+  <a href="/projects/{{ p.id }}/financial" class="btn btn-gold">💰 الحالة المالية للمشروع</a>
+  <a href="/export/project/{{ p.id }}" class="btn btn-teal">الكشف (Excel)</a>
+  <a href="/export/project/{{ p.id }}?fmt=pdf" class="btn btn-gold">الكشف (PDF)</a>
+  <a href="/projects" class="btn btn-dark">كل المشاريع</a>
+</div>
+
+<div class="cards-grid">
+  <div class="card"><div class="lbl">العميل</div><div class="val" style="font-size:20px">{{ p.client_name }}</div></div>
+  <div class="card"><div class="lbl">قيمة العقد</div><div class="val gold">{{ num(contract_value) }}</div></div>
+  <div class="card red"><div class="lbl">التكلفة حتى الآن</div><div class="val red">{{ num(cost_total) }}</div></div>
+  <div class="card"><div class="lbl">المحصل</div><div class="val teal">{{ num(received_total) }}</div></div>
+  <div class="card green"><div class="lbl">الربح المقدر</div><div class="val green">{{ num(profit) }}</div></div>
+</div>
+
+<div class="panel" style="margin-bottom:18px">
+  <div class="panel-head"><h3>نسبة تنفيذ التكاليف</h3></div>
+  <div class="panel-body">
+    <div class="proj-progress" style="height:14px"><div style="width:{{ progress }}%"></div></div>
+    <div class="proj-stat" style="margin-top:6px"><span>التكلفة / قيمة العقد</span><b>{{ progress }}%</b></div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-head"><h3>بيانات المشروع</h3></div>
+    <div class="panel-body">
+      <table class="tbl">
+        <tbody>
+          <tr><td>النوع</td><td><b>{{ p.project_type }}</b></td></tr>
+          <tr><td>الموقع</td><td>{{ p.location or '-' }}</td></tr>
+          <tr><td>المهندس الاستشاري</td><td>{{ p.engineer or '-' }}</td></tr>
+          <tr><td>مهندس الإشراف</td><td>{{ p.supervisor or '-' }}</td></tr>
+          <tr><td>البداية</td><td>{{ p.start_date or '-' }}</td></tr>
+          <tr><td>النهاية</td><td>{{ p.end_date or '-' }}</td></tr>
+          <tr><td>ملاحظات</td><td>{{ p.notes or '-' }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h3>العقد</h3>
+      {% if can_write() %}<a href="/projects/{{ p.id }}/contract" class="btn btn-teal btn-sm">{% if contract %}تعديل{% else %}إضافة عقد{% endif %}</a>{% endif %}
+      {% if contract and can_admin() %}<button type="button" class="btn btn-danger btn-sm" onclick="confirmDeleteContract({{ p.id }}, '{{ contract.contract_no or '' }}')">حذف العقد</button>{% endif %}
+    </div>
+    <div class="panel-body">
+      {% if contract %}
+      <table class="tbl">
+        <tbody>
+          <tr><td>رقم العقد</td><td><b>{{ contract.contract_no or '-' }}</b></td></tr>
+          <tr><td>التاريخ</td><td>{{ contract.contract_date or '-' }}</td></tr>
+          <tr><td>قيمة العقد</td><td><b>{{ num(contract.contract_value) }}</b></td></tr>
+          <tr><td>الدفعة المقدمة</td><td>{{ num(contract.advance_amount) }} ({{ contract.advance_percent }}%)</td></tr>
+          <tr><td>محجوز الضمان</td><td>{{ num(contract.retention_amount) }} ({{ contract.retention_percent }}%)</td></tr>
+          <tr><td>المدة</td><td>{{ contract.duration_days }} يوم</td></tr>
+          <tr><td>الشروط</td><td>{{ contract.terms or '-' }}</td></tr>
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state"><div class="big">📜</div>لا يوجد عقد بعد</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="panel" style="margin:18px 0" id="boq">
+  <div class="panel-head"><h3>بنود المقايسة (BoQ)</h3><span class="badge gray">الإجمالي: {{ num(boq_total) }}</span></div>
+  <div class="panel-body">
+    {% if can_write() %}
+    <form method="post" action="/projects/{{ p.id }}/boq" class="form-grid" style="margin-bottom:16px">
+      <div class="field"><label>رقم البند</label><input type="text" name="item_no"></div>
+      <div class="field"><label>البيان *</label><input type="text" name="description" required></div>
+      <div class="field"><label>الوحدة</label><input type="text" name="unit" placeholder="م²"></div>
+      <div class="field"><label>الكمية</label><input type="number" step="any" name="quantity"></div>
+      <div class="field"><label>سعر الوحدة</label><input type="number" step="any" name="unit_price"></div>
+      <div class="field"><label>الترتيب</label><input type="number" name="sort_order" value="0"></div>
+      <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">إضافة بند</button></div>
+    </form>
+    {% endif %}
+    {% if boq %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>#</th><th>البيان</th><th>الوحدة</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th>{% if can_write() %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for b in boq %}
+        <tr>
+          <td>{{ b.item_no }}</td><td>{{ b.description }}</td><td>{{ b.unit }}</td>
+          <td class="num">{{ num(b.quantity) }}</td><td class="num">{{ num(b.unit_price) }}</td>
+          <td class="num">{{ num(b.total) }}</td>
+          {% if can_write() %}
+          <td>
+            <div class="toolbar">
+              <button class="btn btn-dark btn-sm" onclick="editBoq({{ b.id }}, '{{ (b.item_no or '')|e }}', '{{ (b.description or '')|e }}', '{{ (b.unit or '')|e }}', {{ b.quantity or 0 }}, {{ b.unit_price or 0 }}, {{ b.sort_order or 0 }})">تعديل</button>
+              <form method="post" action="/boq/{{ b.id }}/delete" onsubmit="return confirm('حذف البند؟')"><button class="btn btn-red btn-sm">حذف</button></form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td colspan="5">الإجمالي</td><td class="num">{{ num(boq_total) }}</td>{% if can_write() %}<td></td>{% endif %}</tr></tfoot>
+    </table></div>
+    {% else %}
+    <div class="empty-state"><div class="big">📋</div>لا توجد بنود</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel" style="margin:18px 0" id="budget">
+  <div class="panel-head">
+    <h3>الميزانية التقديرية</h3>
+    <span class="badge gray">الإجمالي: {{ num(budget_total) }}</span>
+    {% if budget_total > 0 %}<span class="badge {{ 'red' if cost_total > budget_total else 'green' }}">النفقات: {{ num(cost_total) }} ({{ (cost_total/budget_total*100)|round(1) if budget_total else 0 }}%)</span>{% endif %}
+  </div>
+  <div class="panel-body">
+    {% if can_write() %}
+    <form method="post" action="/projects/{{ p.id }}/budget/add" class="form-grid" style="margin-bottom:16px">
+      <div class="field"><label>رقم البند</label><input type="text" name="item_no"></div>
+      <div class="field"><label>البيان *</label><input type="text" name="description" required></div>
+      <div class="field"><label>الوحدة</label><input type="text" name="unit"></div>
+      <div class="field"><label>الكمية</label><input type="number" step="any" name="quantity"></div>
+      <div class="field"><label>سعر الوحدة</label><input type="number" step="any" name="unit_price"></div>
+      <div class="field"><label>الترتيب</label><input type="number" name="sort_order" value="0"></div>
+      <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">إضافة بند</button></div>
+    </form>
+    {% endif %}
+    {% if budget %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>#</th><th>البيان</th><th>الوحدة</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th>{% if can_write() %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for b in budget %}
+        <tr>
+          <td>{{ b.item_no }}</td><td>{{ b.description }}</td><td>{{ b.unit }}</td>
+          <td class="num">{{ num(b.quantity) }}</td><td class="num">{{ num(b.unit_price) }}</td>
+          <td class="num">{{ num(b.total) }}</td>
+          {% if can_write() %}
+          <td>
+            <div class="toolbar">
+              <button class="btn btn-dark btn-sm" onclick="editBud({{ b.id }}, '{{ (b.item_no or '')|e }}', '{{ (b.description or '')|e }}', '{{ (b.unit or '')|e }}', {{ b.quantity or 0 }}, {{ b.unit_price or 0 }}, {{ b.sort_order or 0 }})">تعديل</button>
+              <form method="post" action="/projects/budget/{{ b.id }}/delete" onsubmit="return confirm('حذف البند؟')"><button class="btn btn-red btn-sm">حذف</button></form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td colspan="5">الإجمالي</td><td class="num">{{ num(budget_total) }}</td>{% if can_write() %}<td></td>{% endif %}</tr></tfoot>
+    </table></div>
+    {% else %}
+    <div class="empty-state"><div class="big">📐</div>لا توجد بنود ميزانية</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-head"><h3>تكاليف المشروع</h3>{% if can_write() %}<a href="/costs" class="btn btn-dark btn-sm">إضافة</a>{% endif %}</div>
+    <div class="panel-body">
+      {% if costs %}
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>التاريخ</th><th>النوع</th><th>البيان</th><th>المبلغ</th></tr></thead>
+        <tbody>
+          {% for c in costs %}<tr><td>{{ c.cost_date }}</td><td>{{ c.cost_type }}</td><td>{{ c.description }}</td><td class="num">{{ num(c.amount) }}</td></tr>{% endfor %}
+        </tbody>
+        <tfoot><tr><td colspan="3">الإجمالي</td><td class="num">{{ num(cost_total) }}</td></tr></tfoot>
+      </table></div>
+      {% else %}<div class="empty-state"><div class="big">🧮</div>لا توجد تكاليف</div>{% endif %}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h3>المستخلصات</h3>{% if can_write() %}<a href="/interim/new" class="btn btn-teal btn-sm">مستخلص جديد</a>{% endif %}</div>
+    <div class="panel-body">
+      {% if payments %}
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>الرقم</th><th>التاريخ</th><th>قيمة الأعمال</th><th>الضمان</th><th>الصافي</th><th>الحالة</th></tr></thead>
+        <tbody>
+          {% for it in payments %}
+          <tr>
+            <td>{{ it.payment_no }}</td><td>{{ it.payment_date }}</td>
+            <td class="num">{{ num(it.work_value) }}</td><td class="num">{{ num(it.retention_amount) }}</td>
+            <td class="num">{{ num(it.net_payment) }}</td>
+            <td><span class="status-badge {{ 'status-mukmal' if it.status=='محصل' else 'status-jari' }}">{{ it.status }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}<div class="empty-state"><div class="big">📋</div>لا توجد مستخلصات</div>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:18px" id="payments">
+  <div class="panel-head"><h3>دفعات استلام من العميل</h3>{% if can_write() %}<a href="#" onclick="openModal('payModal');return false" class="btn btn-teal btn-sm">تسجيل دفعة</a>{% endif %}</div>
+  <div class="panel-body">
+    {% if receipts %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>التاريخ</th><th>المبلغ</th><th>الطريقة</th><th>مرجع</th><th>ملاحظات</th>{% if can_write() %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for r in receipts %}
+        <tr><td>{{ r.payment_date }}</td><td class="num">{{ num(r.amount) }}</td><td>{{ r.method }}</td><td>{{ r.reference }}</td><td>{{ r.notes }}</td>
+          {% if can_write() %}
+          <td>
+            <div class="toolbar">
+              <button class="btn btn-dark btn-sm" onclick="editPay({{ r.id }}, '{{ (r.payment_date or '')|e }}', {{ r.amount }}, '{{ (r.method or '')|e }}', '{{ (r.reference or '')|e }}', '{{ (r.notes or '')|e }}')">تعديل</button>
+              <a class="btn btn-teal btn-sm" target="_blank" href="/payments/{{ r.id }}/voucher" title="سند قبض PDF">سند قبض</a>
+              <a class="btn btn-gold btn-sm" target="_blank" href="/payments/{{ r.id }}/tax-invoice" title="فاتورة ضريبية PDF">فاتورة ضريبية</a>
+              <form method="post" action="/payments/{{ r.id }}/delete" onsubmit="return confirm('حذف الدفعة؟')"><button class="btn btn-red btn-sm">حذف</button></form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td colspan="2">الإجمالي</td><td class="num">{{ num(received_total) }}</td><td colspan="{% if can_write() %}3{% else %}2{% endif %}"></td></tr></tfoot>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">💵</div>لا توجد دفعات استلام</div>{% endif %}
+  </div>
+</div>
+
+<div class="modal-overlay" id="payModal">
+  <div class="modal">
+    <div class="modal-head"><h3>تسجيل دفعة من العميل</h3><button class="modal-close" data-close-modal>✕</button></div>
+    <form method="post" action="/projects/{{ p.id }}/payment">
+      <div class="modal-body form-grid">
+        <div class="field"><label>التاريخ</label><input type="date" name="payment_date" required></div>
+        <div class="field"><label>المبلغ *</label><input type="number" step="any" name="amount" required></div>
+        <div class="field"><label>طريقة الدفع</label>
+          <select name="method"><option>نقداً</option><option>شيك</option><option>تحويل بنكي</option><option>أخرى</option></select>
+        </div>
+        <div class="field"><label>المرجع</label><input type="text" name="reference" placeholder="رقم الفاتورة/الإيصال"></div>
+        <div class="field" style="grid-column:1/-1"><label>ملاحظات</label><textarea name="notes" style="grid-column:1/-1"></textarea></div>
+      </div>
+      <div class="modal-foot">
+        <label style="font-size:13px;display:flex;align-items:center;gap:5px;margin-left:auto"><input type="checkbox" name="auto_post" checked>ترحيل تلقائي إلى القيود (صندوق/بنك ↔ العملاء)</label>
+        <button class="btn btn-gold">حفظ</button>
+        <button type="button" class="btn btn-dark" data-close-modal>إلغاء</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="payEditModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3>تعديل دفعة العميل</h3><button class="modal-close" data-close-modal>✕</button></div>
+    <div class="modal-body">
+      <form method="post" class="form-grid">
+        <div class="field"><label>التاريخ</label><input type="date" name="payment_date" required></div>
+        <div class="field"><label>المبلغ *</label><input type="number" step="any" name="amount" required></div>
+        <div class="field"><label>طريقة الدفع</label>
+          <select name="method"><option>نقداً</option><option>شيك</option><option>تحويل بنكي</option><option>أخرى</option></select>
+        </div>
+        <div class="field"><label>المرجع</label><input type="text" name="reference"></div>
+        <div class="field" style="grid-column:1/-1"><label>ملاحظات</label><textarea name="notes" style="grid-column:1/-1"></textarea></div>
+        <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">حفظ التعديلات</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="boqEditModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3>تعديل بند BoQ</h3><button class="modal-close" data-close-modal>✕</button></div>
+    <div class="modal-body">
+      <form method="post" class="form-grid">
+        <div class="field"><label>رقم البند</label><input type="text" name="item_no"></div>
+        <div class="field"><label>البيان *</label><input type="text" name="description" required></div>
+        <div class="field"><label>الوحدة</label><input type="text" name="unit"></div>
+        <div class="field"><label>الكمية</label><input type="number" step="any" name="quantity"></div>
+        <div class="field"><label>سعر الوحدة</label><input type="number" step="any" name="unit_price"></div>
+        <div class="field"><label>الترتيب</label><input type="number" name="sort_order"></div>
+        <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">حفظ التعديلات</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="budEditModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3>تعديل بند الميزانية</h3><button class="modal-close" data-close-modal>✕</button></div>
+    <div class="modal-body">
+      <form method="post" class="form-grid">
+        <div class="field"><label>رقم البند</label><input type="text" name="item_no"></div>
+        <div class="field"><label>البيان *</label><input type="text" name="description" required></div>
+        <div class="field"><label>الوحدة</label><input type="text" name="unit"></div>
+        <div class="field"><label>الكمية</label><input type="number" step="any" name="quantity"></div>
+        <div class="field"><label>سعر الوحدة</label><input type="number" step="any" name="unit_price"></div>
+        <div class="field"><label>الترتيب</label><input type="number" name="sort_order"></div>
+        <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">حفظ التعديلات</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function editPay(id, payment_date, amount, method, reference, notes){
+  const el = $('#payEditModal');
+  el.querySelector('form').action = '/payments/' + id + '/edit';
+  el.querySelector('[name=payment_date]').value = payment_date;
+  el.querySelector('[name=amount]').value = amount;
+  el.querySelector('[name=method]').value = method;
+  el.querySelector('[name=reference]').value = reference;
+  el.querySelector('[name=notes]').value = notes;
+  openModal('payEditModal');
+}
+function editBoq(id, item_no, description, unit, quantity, unit_price, sort_order){
+  const el = $('#boqEditModal');
+  el.querySelector('form').action = '/boq/' + id + '/edit';
+  el.querySelector('[name=item_no]').value = item_no;
+  el.querySelector('[name=description]').value = description;
+  el.querySelector('[name=unit]').value = unit;
+  el.querySelector('[name=quantity]').value = quantity;
+  el.querySelector('[name=unit_price]').value = unit_price;
+  el.querySelector('[name=sort_order]').value = sort_order;
+  openModal('boqEditModal');
+}
+function editBud(id, item_no, description, unit, quantity, unit_price, sort_order){
+  const el = $('#budEditModal');
+  el.querySelector('form').action = '/projects/budget/' + id + '/edit';
+  el.querySelector('[name=item_no]').value = item_no;
+  el.querySelector('[name=description]').value = description;
+  el.querySelector('[name=unit]').value = unit;
+  el.querySelector('[name=quantity]').value = quantity;
+  el.querySelector('[name=unit_price]').value = unit_price;
+  el.querySelector('[name=sort_order]').value = sort_order;
+  openModal('budEditModal');
+}
+function confirmDeleteContract(pid, name){
+  const txt = prompt(
+    "تحذير: حذف العقد سيحذف نهائيًا إلى الأبد (بما فيه بنود الكميات) ولا يمكن التراجع.\n\n" +
+    "للتأكيد اكتب كلمة: نعم\n\n(اسم العقد: " + (name ? name : '-') + ")\n" +
+    "وإلا اكتب أي شيء آخر للإلغاء."
+  );
+  if (txt === null) return;
+  if (txt.trim() !== "نعم") { alert("تم الإلغاء — لم يُحذف العقد."); return; }
+  const f = document.createElement("form");
+  f.method = "POST";
+  f.action = "/projects/" + pid + "/contract/delete";
+  const inp = document.createElement("input");
+  inp.type = "hidden"; inp.name = "confirm"; inp.value = "نعم";
+  f.appendChild(inp);
+  document.body.appendChild(f);
+  f.submit();
+}
+</script>
+{% if not can_write() %}<script>window.editPay = function(){}; window.editBoq = function(){}; window.editBud = function(){};</script>{% endif %}
+{% endblock %}

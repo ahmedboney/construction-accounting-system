@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}كشف حساب المورد{% endblock %}
+{% block page_title %}🧾 كشف حساب المورد{% endblock %}
+{% block content %}
+<div class="quick-actions">
+  <a href="/suppliers" class="btn btn-dark">قائمة الموردين</a>
+  <a href="/supplier-invoices" class="btn btn-dark">فواتير الموردين</a>
+  <a href="/export/supplier-statement/{{ s.id }}" class="btn btn-teal">تصدير (Excel)</a>
+  <a href="/export/supplier-statement/{{ s.id }}?fmt=pdf" class="btn btn-gold">تصدير (PDF)</a>
+</div>
+
+<div class="panel">
+  <div class="panel-head"><h3>بيانات المورد</h3></div>
+  <div class="panel-body">
+    <table class="tbl">
+      <tbody>
+        <tr><td class="lbl-cell">الاسم</td><td>{{ s.name }}</td>
+            <td class="lbl-cell">الشركة</td><td>{{ s.company or '-' }}</td></tr>
+        <tr><td class="lbl-cell">الهاتف</td><td>{{ s.phone or '-' }}</td>
+            <td class="lbl-cell">الرقم الضريبي</td><td>{{ s.tax_no or '-' }}</td></tr>
+        <tr><td class="lbl-cell">العنوان</td><td>{{ s.address or '-' }}</td>
+            <td class="lbl-cell">شروط الدفع</td><td>{{ s.payment_terms or '-' }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:16px">
+  <div class="panel-head"><h3>حركة الحساب (الفواتير والسددات)</h3></div>
+  <div class="panel-body">
+    {% if rows %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>التاريخ</th><th>البيان</th><th>فاتورة (مدين)</th><th>سداد (دائن)</th><th>الرصيد</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.date }}</td>
+          <td>{{ r.desc }}</td>
+          <td class="num">{{ num(r.debit) }}</td>
+          <td class="num">{{ num(r.credit) }}</td>
+          <td class="num"><b class="{{ 'amt-c' if r.balance>0.01 else 'amt-d' }}">{{ num(r.balance) }}</b></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><td colspan="2">الإجمالي</td>
+          <td class="num">{{ num(totals.invoice) }}</td>
+          <td class="num">{{ num(totals.paid) }}</td>
+          <td class="num"><b class="{{ 'amt-c' if totals.balance>0.01 else 'amt-d' }}">{{ num(totals.balance) }}</b></td></tr>
+      </tfoot>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">🧾</div>لا توجد حركة على حساب هذا المورد بعد</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block title %}الحالة المالية — {{ p.name }}{% endblock %}
+{% block page_title %}💰 الحالة المالية للمشروع{% endblock %}
+{% block content %}
+<div class="toolbar" style="margin-bottom:6px">
+  <a href="/projects/{{ p.id }}" class="btn btn-dark">عودة للمشروع</a>
+  <a href="/export/project/{{ p.id }}" class="btn btn-teal">تصدير الكشف (Excel)</a>
+  <a href="/export/project/{{ p.id }}?fmt=pdf" class="btn btn-gold">الكشف (PDF)</a>
+  {% if can_write() %}
+  <a href="/projects/{{ p.id }}/contract" class="btn btn-teal">العقد</a>
+  <a href="/interim/new" class="btn btn-gold">+ مستخلص جديد</a>
+  <a href="/costs" class="btn btn-dark">+ تسجيل تكلفة</a>
+  {% endif %}
+</div>
+<div class="hint" style="margin-bottom:18px">
+  المشروع: <b>{{ p.name }}</b> — العميل: <b>{{ p.client_name }}</b> — النوع: {{ p.project_type }} — الموقع: {{ p.location or '-' }}
+  — الحالة: <span class="status-badge {{ status_class(p.status) }}">{{ p.status }}</span>
+  — البداية: {{ p.start_date or '-' }} — النهاية: {{ p.end_date or '-' }}
+</div>
+
+<div class="cards-grid">
+  <div class="card"><div class="lbl">قيمة العقد</div><div class="val gold">{{ num(fin.contract_value) }}</div></div>
+  <div class="card teal"><div class="lbl">الأعمال المنفذة (مستخلصات)</div><div class="val teal">{{ num(fin.work_total) }}</div></div>
+  <div class="card"><div class="lbl">صافي المستحق من العميل</div><div class="val">{{ num(fin.net_total) }}</div></div>
+  <div class="card green"><div class="lbl">المحصل من العميل</div><div class="val green">{{ num(fin.recv_total) }}</div></div>
+  <div class="card red"><div class="lbl">المتبقي على العميل</div><div class="val red">{{ num(fin.client_balance) }}</div></div>
+  <div class="card"><div class="lbl">رصيد المحجوز (ضمانات)</div><div class="val amber" style="color:var(--amber)">{{ num(fin.ret_balance) }}</div></div>
+  <div class="card red"><div class="lbl">إجمالي التكاليف</div><div class="val red">{{ num(fin.cost_total) }}</div></div>
+  <div class="card"><div class="lbl">مدفوعات الموردين/الباطن</div><div class="val">{{ num(fin.pay_total) }}</div></div>
+  <div class="card green"><div class="lbl">الربح المتوقع (العقد - التكاليف)</div><div class="val green">{{ num(fin.expected_profit) }}</div></div>
+</div>
+
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-head"><h3>أولاً: حساب الاستحقاقات (ما لنا عند العميل)</h3></div>
+    <div class="panel-body">
+      <table class="tbl">
+        <tbody>
+          <tr><td>قيمة العقد</td><td class="num">{{ num(fin.contract_value) }}</td></tr>
+          <tr><td>إجمالي الأعمال المنفذة (مستخلصات)</td><td class="num">{{ num(fin.work_total) }}</td></tr>
+          <tr><td>إجمالي المحجوز من المستخلصات</td><td class="num">{{ num(fin.ret_total) }}</td></tr>
+          <tr><td>المحجوز المحرر</td><td class="num">{{ num(fin.ret_released) }}</td></tr>
+          <tr class="total-row"><td>صافي المستحق من العميل (شامل الرصيد المحجوز)</td><td class="num">{{ num(fin.net_total) }}</td></tr>
+          <tr><td>محصل من المستخلصات</td><td class="num">{{ num(fin.recv_interim) }}</td></tr>
+          <tr><td>دفعات مباشرة من العميل</td><td class="num">{{ num(fin.recv_direct) }}</td></tr>
+          <tr><td>إجمالي المحصل من العميل</td><td class="num">{{ num(fin.recv_total) }}</td></tr>
+          <tr class="total-row"><td>رصيد المتبقي على العميل</td><td class="num">{{ num(fin.client_balance) }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h3>ثانياً: حساب الالتزامات والتكاليف (ما علينا)</h3></div>
+    <div class="panel-body">
+      <table class="tbl">
+        <tbody>
+          <tr><td>إجمالي تكاليف المشروع (مواد، عمالة، باطن، معدات...)</td><td class="num">{{ num(fin.cost_total) }}</td></tr>
+          <tr><td>مدفوعات للموردين ومقاولي الباطن</td><td class="num">{{ num(fin.pay_total) }}</td></tr>
+          <tr class="total-row"><td>المتبقي للموردين/المقاولين</td><td class="num">{{ num(fin.unpaid_suppliers) }}</td></tr>
+          <tr class="total-row"><td>صافي مركز المشروع الحالي</td><td class="num">{{ num(fin.position) }}</td></tr>
+          <tr><td>رصيد المحجوز الحالي (Reservation)</td><td class="num">{{ num(fin.ret_balance) }}</td></tr>
+          <tr><td>الربح المتوقع</td><td class="num">{{ num(fin.expected_profit) }}</td></tr>
+        </tbody>
+      </table>
+      <div class="hint" style="margin-top:10px">
+        صافي مركز المشروع = (المتبقي على العميل) - (المتبقي للموردين).<br>
+        سجّل التحصيل إما عبر «تحصيل المستخلص» أو «دفعة مباشرة» دون التكرار.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:18px" id="retention">
+  <div class="panel-head"><h3>🔒 رصيد المحجوز (ضمانات العملاء — Reservation)</h3></div>
+  <div class="panel-body">
+    <div class="kpi-row">
+      <div class="kpi"><div class="l">إجمالي المحجوز</div><div class="n">{{ num(fin.ret_total) }}</div></div>
+      <div class="kpi"><div class="l">المحرر</div><div class="n green">{{ num(fin.ret_released) }}</div></div>
+      <div class="kpi"><div class="l">رصيد المحجوز الحالي</div><div class="n" style="color:var(--amber)">{{ num(fin.ret_balance) }}</div></div>
+    </div>
+    {% if fin.interims %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>المستخلص</th><th>التاريخ</th><th>قيمة الأعمال</th><th>نسبة الخصم</th><th>المحجوز</th><th>صافي المستحق</th><th>الحالة</th>{% if can_write() %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for i in fin.interims %}
+        <tr>
+          <td><b>{{ i.payment_no or i.id }}</b></td>
+          <td>{{ i.payment_date or '-' }}</td>
+          <td class="num">{{ num(i.work_value) }}</td>
+          <td class="num">{% if i.retention_percent or i.retention_amount %}%{{ i.retention_percent }}{% else %}-{% endif %}</td>
+          <td class="num">{{ num(i.retention_amount) }}</td>
+          <td class="num">{{ num(i.net_payment) }}</td>
+          <td>{% if i.released %}<span class="badge posted">محرر 🔓</span>{% else %}<span class="badge draft">محجوز 🔒</span>{% endif %}</td>
+          {% if can_write() %}
+          <td>
+            <form method="post" action="/interim/{{ i.id }}/release">
+              <button class="btn btn-sm {{ 'btn-green' if not i.released else 'btn-dark' }}">{{ 'تحرير المحجوز' if not i.released else 'إعادة الحجز' }}</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">🔒</div>لا توجد مستخلصات بعد لخصم ضمانات منها</div>{% endif %}
+  </div>
+</div>
+
+<div class="grid-2" style="margin-top:18px">
+  <div class="panel">
+    <div class="panel-head"><h3>المستخلصات والتحصيلات من العميل</h3>{% if can_write() %}<a href="/interim/new" class="btn btn-teal btn-sm">مستخلص جديد</a>{% endif %}</div>
+    <div class="panel-body">
+      {% if fin.interims %}
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>الرقم</th><th>التاريخ</th><th>قيمة الأعمال</th><th>المحجوز</th><th>الصافي</th><th>المحصل</th><th>المتبقي</th></tr></thead>
+        <tbody>
+          {% for i in fin.interims %}
+          <tr>
+            <td><b>{{ i.payment_no or i.id }}</b></td>
+            <td>{{ i.payment_date or '-' }}</td>
+            <td class="num">{{ num(i.work_value) }}</td>
+            <td class="num">{{ num(i.retention_amount) }}</td>
+            <td class="num">{{ num(i.net_payment) }}</td>
+            <td class="num">{{ num(i.actual_received) }}</td>
+            <td class="num"><b>{{ num(i.net_payment - i.actual_received) }}</b></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}<div class="empty-state"><div class="big">📋</div>لا توجد مستخلصات</div>{% endif %}
+
+      <h3 style="margin-top:18px;font-size:14px">الدفعات المباشرة من العميل</h3>
+      {% if fin.receipts %}
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>التاريخ</th><th>الطريقة</th><th>المرجع</th><th>المبلغ</th></tr></thead>
+        <tbody>
+          {% for r in fin.receipts %}
+          <tr><td>{{ r.payment_date or '-' }}</td><td>{{ r.method }}</td><td>{{ r.reference or '-' }}</td><td class="num">{{ num(r.amount) }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}<div class="hint">لا توجد دفعات مباشرة</div>{% endif %}
+    </div>
+  </div>
+
+  <div class="panel" id="suppliers">
+    <div class="panel-head"><h3>مدفوعات الموردين ومقاولي الباطن</h3></div>
+    <div class="panel-body">
+      {% if can_write() %}
+      <form method="post" action="/projects/{{ p.id }}/pay" class="form-grid">
+        <div class="field"><label>التاريخ</label><input type="date" name="payment_date"></div>
+        <div class="field"><label>المورد</label>
+          <select name="supplier_id"><option value="">— بدون —</option>{% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select>
+        </div>
+        <div class="field"><label>مقاول الباطن</label>
+          <select name="sub_id"><option value="">— بدون —</option>{% for s in subs %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select>
+        </div>
+        <div class="field"><label>المبلغ *</label><input type="number" step="any" name="amount" required></div>
+        <div class="field"><label>المدفوعات</label><select name="method"><option>نقداً</option><option>تحويل بنكي</option><option>شيك</option></select></div>
+        <div class="field"><label>المرجع</label><input type="text" name="reference"></div>
+        <div class="field" style="grid-column:1/-1"><label>ملاحظات</label><textarea name="notes"></textarea></div>
+        <div class="field" style="grid-column:1/-1">
+          <label style="font-size:13px;display:flex;align-items:center;gap:5px;margin-bottom:8px"><input type="checkbox" name="auto_post" checked>ترحيل تلقائي إلى القيود (مورد/باطن ↔ صندوق/بنك)</label>
+          <button class="btn btn-gold">تسجيل الدفعة</button>
+        </div>
+      </form>
+      {% endif %}
+      <div class="hint" style="margin-bottom:10px">إجمالي المدفوعات: <b>{{ num(fin.pay_total) }}</b> — المتبقي: <b>{{ num(fin.unpaid_suppliers) }}</b></div>
+      {% if fin.pay_rows %}
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>التاريخ</th><th>المستفيد</th><th>الطريقة</th><th>المرجع</th><th>المبلغ</th><th>ملاحظات</th>{% if can_write() %}<th></th>{% endif %}</tr></thead>
+        <tbody>
+          {% for ps in fin.pay_rows %}
+          <tr>
+            <td>{{ ps.payment_date or '-' }}</td>
+            <td>{{ ps.party_name }}</td>
+            <td>{{ ps.method }}</td>
+            <td>{{ ps.reference or '-' }}</td>
+            <td class="num">{{ num(ps.amount) }}</td>
+            <td>{{ ps.notes or '-' }}</td>
+            {% if can_write() %}
+            <td>
+              <div class="toolbar">
+                <button class="btn btn-dark btn-sm" onclick="editSupPay({{ ps.id }}, {{ ps.supplier_id or 'null' }}, {{ ps.sub_id or 'null' }}, '{{ (ps.payment_date or '')|e }}', {{ ps.amount }}, '{{ (ps.method or '')|e }}', '{{ (ps.reference or '')|e }}', '{{ (ps.notes or '')|e }}')">تعديل</button>
+                <a class="btn btn-teal btn-sm" target="_blank" href="/supplier-payments/{{ ps.id }}/voucher" title="سند صرف PDF">سند صرف</a>
+                <form method="post" action="/supplier-payments/{{ ps.id }}/delete" onsubmit="return confirm('حذف الدفعة؟')"><button class="btn btn-red btn-sm">حذف</button></form>
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}<div class="empty-state"><div class="big">💸</div>لا توجد مدفوعات مسجلة</div>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function editSupPay(id, supplier_id, sub_id, payment_date, amount, method, reference, notes){
+  const el = $('#supPayEditModal');
+  el.querySelector('form').action = '/supplier-payments/' + id + '/edit';
+  el.querySelector('[name=supplier_id]').value = supplier_id || '';
+  el.querySelector('[name=sub_id]').value = sub_id || '';
+  el.querySelector('[name=payment_date]').value = payment_date;
+  el.querySelector('[name=amount]').value = amount;
+  el.querySelector('[name=method]').value = method;
+  el.querySelector('[name=reference]').value = reference;
+  el.querySelector('[name=notes]').value = notes;
+  openModal('supPayEditModal');
+}
+</script>
+<div id="supPayEditModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3>تعديل دفعة المورد/الباطن</h3><button class="modal-close" data-close-modal>✕</button></div>
+    <div class="modal-body">
+      <form method="post" class="form-grid">
+        <div class="field"><label>المورد</label><select name="supplier_id">
+          <option value="">— بدون —</option>{% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>مقاول الباطن</label><select name="sub_id">
+          <option value="">— بدون —</option>{% for s in subs %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+        </select></div>
+        <div class="field"><label>التاريخ</label><input type="date" name="payment_date"></div>
+        <div class="field"><label>المبلغ *</label><input type="number" step="any" name="amount" required></div>
+        <div class="field"><label>الطريقة</label><select name="method"><option>نقداً</option><option>تحويل بنكي</option><option>شيك</option></select></div>
+        <div class="field"><label>المرجع</label><input type="text" name="reference"></div>
+        <div class="field" style="grid-column:1/-1"><label>ملاحظات</label><textarea name="notes"></textarea></div>
+        <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">حفظ التعديلات</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% if not can_write() %}<script>window.editSupPay = function(){};</script>{% endif %}
+{% endblock %}

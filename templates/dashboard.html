@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}لوحة التحكم{% endblock %}
+{% block page_title %}لوحة التحكم{% endblock %}
+{% block content %}
+<div class="cards-grid">
+  <div class="card"><div class="lbl">عدد المشاريع</div><div class="val gold">{{ kpis.projects }}</div></div>
+  <div class="card teal"><div class="lbl">مشاريع جارية</div><div class="val teal">{{ kpis.active }}</div></div>
+  <div class="card"><div class="lbl">إجمالي قيمة العقود</div><div class="val">{{ num(kpis.contracts) }}</div></div>
+  <div class="card red"><div class="lbl">إجمالي التكاليف</div><div class="val red">{{ num(kpis.costs) }}</div></div>
+  <div class="card"><div class="lbl">المحصل من العملاء</div><div class="val teal">{{ num(kpis.received) }}</div></div>
+  <div class="card green"><div class="lbl">صافي الربح (العقود - التكاليف)</div><div class="val green">{{ num(kpis.profit) }}</div></div>
+</div>
+
+<div class="quick-actions">
+  {% if can_write() %}<a href="/projects/new" class="btn btn-gold">+ مشروع جديد</a>
+  <a href="/interim/new" class="btn btn-teal">+ مستخلص جديد</a>
+  <a href="/costs" class="btn btn-dark">تسجيل تكلفة</a>{% endif %}
+  <a href="/reports" class="btn btn-dark">التقارير</a>
+</div>
+
+{% if alerts %}
+<div class="panel" style="margin-bottom:18px;border-color:var(--amber)">
+  <div class="panel-head"><h3>⚠️ تنبيهات ذكية</h3><span class="badge red">{{ alerts|length }}</span></div>
+  <div class="panel-body">
+    <div class="alerts-list">
+      {% for kind, text in alerts %}
+      <div class="alert-line {{ kind }}">
+        <span class="ic">
+          {%- if kind == 'invoice' %}🧾{% elif kind == 'stock' %}📦{% elif kind == 'project' %}🏗️{% elif kind == 'retention' %}🔗{% elif kind == 'budget' %}📐{% else %}⚠️{% endif -%}
+        </span>
+        <span>{{ text }}</span>
+        {% if kind == 'invoice' and can_write() %}<a class="btn btn-dark btn-sm" href="/supplier-invoices">فتح</a>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="panel">
+  <div class="panel-head"><h3>آخر المشاريع</h3><a href="/projects" class="btn btn-dark btn-sm">عرض الكل</a></div>
+  <div class="panel-body">
+    {% if projects %}
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>المشروع</th><th>قيمة العقد</th><th>التكلفة</th><th>المحصل</th><th>الربح</th><th>نسبة التنفيذ</th><th>الحالة</th></tr></thead>
+        <tbody>
+        {% for p in projects %}
+          <tr>
+            <td><a href="/projects/{{ p.id }}"><b>{{ p.name }}</b></a></td>
+            <td class="num">{{ num(p.contract_value) }}</td>
+            <td class="num">{{ num(p.total_cost) }}</td>
+            <td class="num">{{ num(p.received) }}</td>
+            <td class="num">{{ num(p.profit) }}</td>
+            <td style="min-width:120px">
+              <div class="proj-progress"><div style="width:{{ p.progress }}%"></div></div>
+              <div class="proj-stat"><span>التكلفة</span><b>{{ p.progress }}%</b></div>
+            </td>
+            <td><span class="status-badge {{ status_class(p.status) }}">{{ p.status }}</span></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="big">🏗️</div>لا توجد مشاريع بعد. ابدأ بإضافة أول مشروع.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

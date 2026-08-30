@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}دليل الحسابات{% endblock %}
+{% block page_title %}📚 دليل الحسابات{% endblock %}
+{% block content %}
+<div class="quick-actions">
+  <a href="/export/accounts" class="btn btn-teal">تصدير دليل الحسابات (Excel)</a>
+  <a href="/export/accounts?fmt=pdf" class="btn btn-gold">دليل الحسابات (PDF)</a>
+  <a href="/accounts/tree" class="btn btn-purple">شجرة الحسابات</a>
+  {% if can_write() %}
+  <a href="/export/accounts/template" class="btn btn-dark btn-sm">تحميل قالب الاستيراد</a>
+  <form method="post" action="/accounts/reset" onsubmit="return confirm('⚠️ تحذير: سيتم حذف شجرة الحسابات بالكامل وكل القيود نهائيًا ولا يمكن التراجع. هل أنت متأكد؟')">
+    <button class="btn btn-red">🗑 حذف الشجرة نهائيًا</button>
+  </form>
+  <form method="post" action="/import/accounts" enctype="multipart/form-data" class="toolbar" style="align-items:center">
+    <input type="file" name="file" accept=".xlsx" required style="width:250px">
+    <button class="btn btn-violet btn-sm">استيراد دليل الحسابات (Excel)</button>
+  </form>
+  {% endif %}
+</div>
+<div class="panel">
+  <div class="panel-head"><h3>إضافة حساب</h3></div>
+  <div class="panel-body">
+    {% if can_write() %}
+    <form method="post" action="/accounts/new" class="form-grid">
+      <div class="field"><label>رقم الحساب *</label><input type="text" name="acc_no" required></div>
+      <div class="field"><label>اسم الحساب *</label><input type="text" name="name" required></div>
+      <div class="field"><label>النوع</label>
+        <select name="type">{% for t in types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}</select>
+      </div>
+      <div class="field"><label>رصيد افتتاحي</label><input type="number" step="any" name="opening_balance"></div>
+      <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">إضافة</button></div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+<div class="panel" style="margin-top:18px">
+  <div class="panel-head"><h3>قائمة الحسابات</h3></div>
+  <div class="panel-body">
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>الرقم</th><th>الاسم</th><th>النوع</th><th>رصيد افتتاحي</th>{% if can_write() %}<th>إجراءات</th>{% endif %}</tr></thead>
+      <tbody>
+        {% for a in accounts %}
+        <tr>
+          <td class="num"><b>{{ a.acc_no }}</b></td><td>{{ a.name }}</td><td>{{ a.type }}</td>
+          <td class="num">{{ num(a.opening_balance) }}</td>
+          {% if can_write() %}
+          <td>
+            <div class="toolbar">
+              <button class="btn btn-dark btn-sm" onclick="editAcc({{ a.id }}, '{{ a.acc_no|e }}', '{{ a.name|e }}', '{{ a.type|e }}', {{ a.opening_balance }})">تعديل</button>
+              <form method="post" action="/accounts/{{ a.id }}/delete" onsubmit="return confirm('حذف الحساب؟')"><button class="btn btn-red btn-sm">حذف</button></form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function editAcc(id, no, name, type, ob){
+  const el = $('#editModal');
+  el.querySelector('form').action = '/accounts/' + id + '/edit';
+  el.querySelector('[name=acc_no]').value = no;
+  el.querySelector('[name=name]').value = name;
+  el.querySelector('[name=type]').value = type;
+  el.querySelector('[name=opening_balance]').value = ob;
+  openModal('editModal');
+}
+</script>
+<div id="editModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3>تعديل الحساب</h3><button class="modal-close" data-close-modal>✕</button></div>
+    <div class="modal-body">
+      <form method="post" class="form-grid">
+        <div class="field"><label>رقم الحساب</label><input type="text" name="acc_no" required></div>
+        <div class="field"><label>اسم الحساب</label><input type="text" name="name" required></div>
+        <div class="field"><label>النوع</label>
+          <select name="type">{% for t in types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}</select>
+        </div>
+        <div class="field"><label>رصيد افتتاحي</label><input type="number" step="any" name="opening_balance"></div>
+        <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">حفظ</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% if not can_write() %}<script>window.editAcc = function(){};</script>{% endif %}
+{% endblock %}

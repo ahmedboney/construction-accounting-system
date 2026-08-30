@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}الإعدادات{% endblock %}
+{% block page_title %}⚙️ الإعدادات{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-head"><h3>بيانات الشركة</h3></div>
+  <div class="panel-body">
+    <form method="post" class="form-grid">
+      <div class="field"><label>اسم الشركة</label><input type="text" name="company_name" value="{{ get_setting('company_name') }}" required></div>
+      <div class="field"><label>العنوان</label><input type="text" name="company_address" value="{{ get_setting('company_address') }}"></div>
+      <div class="field"><label>الرقم الضريبي</label><input type="text" name="company_tax_no" value="{{ get_setting('company_tax_no') }}"></div>
+      <div class="field"><label>السجل التجاري</label><input type="text" name="company_commercial_no" value="{{ get_setting('company_commercial_no') }}"></div>
+      <div class="field"><label>السنة المالية</label><input type="text" name="financial_year" value="{{ get_setting('financial_year') }}"></div>
+      <div class="field"><label>العملة</label><input type="text" name="currency" value="{{ get_setting('currency') }}"></div>
+      <div class="field"><label>نسبة الضمان الافتراضية للعقود %</label><input type="text" name="contract_default_retention" value="{{ get_setting('contract_default_retention') }}"></div>
+      <div class="field"><label>نسبة ضريبة القيمة المضافة %</label><input type="text" name="vat_rate" value="{{ get_setting('vat_rate') }}"></div>
+      <div class="field" style="grid-column:1/-1">{% if can_write() %}<button class="btn btn-gold">حفظ</button>{% else %}<div class="hint">لا تملك صلاحية تعديل الإعدادات</div>{% endif %}</div>
+    </form>
+  </div>
+</div>
+<div class="panel" style="margin-top:18px">
+  <div class="panel-head"><h3>توقيعات التقارير</h3></div>
+  <div class="panel-body">
+    <form method="post">
+      <div id="sigList" class="sig-list">
+        {% for s in sigs %}
+        <div class="sig-row">
+          <input type="text" name="sig_title[]" value="{{ s.title }}" placeholder="المنصب">
+          <input type="text" name="sig_name[]" value="{{ s.name }}" placeholder="الاسم">
+          <button type="button" class="line-del" onclick="delSig(this)">✕</button>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="form-actions">
+        {% if can_write() %}
+        <button type="button" class="btn btn-dark" onclick="addSig()">+ إضافة توقيع</button>
+        <button class="btn btn-gold">حفظ</button>
+        {% else %}<div class="hint">لا تملك صلاحية تعديل الإعدادات</div>{% endif %}
+      </div>
+    </form>
+    </div>
+  </div>
+</div>
+<div class="panel" style="margin-top:18px">
+  <div class="panel-head"><h3>⚠️ مسح جميع البيانات</h3></div>
+  <div class="panel-body">
+    <div class="hint">يحذف كل البيانات نهائيًا وبلا رجعة: المشاريع، العقود، البنود، المستخلصات، الدفعات، التكاليف، المخازن، العملاء، الموردون، مقاولو الباطن، العمالة، المعدات، المواد، والقيود — <b>مع الحفاظ على المستخدمين ودليل الحسابات والإعدادات</b>. لن تظهر أي بيانات تجريبية بعد الآن.</div>
+    {% if user.role == 'admin' %}
+    <form method="post" action="/settings/reset-all" onsubmit="return confirm('هل أنت متأكد؟ سيتم حذف كل البيانات نهائيًا وبلا رجعة! أكتب DELETE في المربع أدناه للتأكيد.')">
+      <div class="field" style="max-width:300px;margin:10px 0"><label>اكتب DELETE للتأكيد</label><input type="text" name="confirm" placeholder="DELETE" required autocomplete="off"></div>
+      <button class="btn btn-red">🗑️ مسح كل البيانات نهائيًا</button>
+    </form>
+    {% else %}<div class="hint">فقط مدير النظام يملك صلاحية المسح الشامل</div>{% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function addSig(){ const d=document.createElement('div'); d.className='sig-row';
+  d.innerHTML='<input type="text" name="sig_title[]" placeholder="المنصب"><input type="text" name="sig_name[]" placeholder="الاسم"><button type="button" class="line-del" onclick="delSig(this)">✕</button>';
+  $('#sigList').appendChild(d); }
+function delSig(b){ if($$('#sigList .sig-row').length>1) b.parentElement.remove(); }
+</script>
+{% endblock %}

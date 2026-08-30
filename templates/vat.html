@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}تقرير ضريبة القيمة المضافة{% endblock %}
+{% block page_title %}🧾 تقرير ضريبة القيمة المضافة{% endblock %}
+{% block content %}
+<div class="cards-grid">
+  <div class="card"><div class="lbl">الإجمالي الصافي</div><div class="val gold">{{ num(totals.net) }}</div></div>
+  <div class="card red"><div class="lbl">الضريبة المستحقة</div><div class="val red">{{ num(totals.vat) }}</div></div>
+  <div class="card green"><div class="lbl">الإجمالي شامل الضريبة</div><div class="val green">{{ num(totals.total) }}</div></div>
+</div>
+
+<div class="quick-actions" style="margin-top:14px">
+  <a href="/export/vat" class="btn btn-teal">تصدير (Excel)</a>
+  <a href="/export/vat?fmt=pdf" class="btn btn-gold">تصدير (PDF)</a>
+</div>
+
+<div class="panel" style="margin-top:16px">
+  <div class="panel-head"><h3>الفواتير الضريبية المصدرة</h3></div>
+  <div class="panel-body">
+    {% if rows %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>العميل</th><th>البيان</th><th>الصافي</th><th>الضريبة</th><th>الإجمالي</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td><b>{{ r.invoice_no }}</b></td>
+          <td>{{ r.invoice_date or '-' }}</td>
+          <td>{{ r.client_name or '-' }}</td>
+          <td>{{ r.description or '-' }}</td>
+          <td class="num">{{ num(r.total_net) }}</td>
+          <td class="num">{{ num(r.vat_amount) }}</td>
+          <td class="num">{{ num(r.total_with_vat) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td colspan="4">الإجمالي</td>
+        <td class="num">{{ num(totals.net) }}</td>
+        <td class="num">{{ num(totals.vat) }}</td>
+        <td class="num">{{ num(totals.total) }}</td></tr></tfoot>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">🧾</div>لا توجد فواتير ضريبية بعد — صدّر فاتورة ضريبية من دفعات العملاء لبدء التقرير</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

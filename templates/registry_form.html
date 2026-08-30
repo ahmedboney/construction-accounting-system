@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ 'تعديل' if is_edit else 'إضافة' }} — {{ title }}{% endblock %}
+{% block page_title %}{{ 'تعديل' if is_edit else 'إضافة جديدة' }} — {{ title }}{% endblock %}
+{% block content %}
+{% set labels = {
+  'name':'الاسم','company':'الشركة','phone':'الهاتف','email':'البريد الإلكتروني',
+  'address':'العنوان','tax_no':'الرقم الضريبي','notes':'ملاحظات',
+  'payment_terms':'شروط الدفع','trade':'التخصص','job':'الوظيفة',
+  'daily_rate':'الأجر اليومي','monthly_salary':'الراتب الشهري','ssn':'الرقم القومي',
+  'status':'الحالة','license_no':'رقم اللوحة','category':'الفئة',
+  'purchase_cost':'تكلفة الشراء','depreciation_rate':'نسبة الإهلاك','site':'الموقع',
+  'unit':'الوحدة','cost_price':'سعر التكلفة','min_stock':'حد أدنى للمخزون'
+} %}
+{% set numeric = ['daily_rate','monthly_salary','purchase_cost','depreciation_rate','cost_price','min_stock'] %}
+<div class="panel">
+  <div class="panel-head"><h3>بيانات {{ title }}</h3></div>
+  <div class="panel-body">
+    <form method="post" class="form-grid">
+      {% for f in fields %}
+      <div class="field">
+        <label>{{ labels.get(f, f) }}</label>
+        {% if f in numeric %}
+        <input type="number" step="any" name="{{ f }}" value="{{ item.get(f, '') }}">
+        {% elif f == 'status' %}
+        <select name="{{ f }}">
+          <option value="نشط" {{ 'selected' if item.get(f)=='نشط' }}>نشط</option>
+          <option value="غير نشط" {{ 'selected' if item.get(f)=='غير نشط' }}>غير نشط</option>
+        </select>
+        {% elif f == 'notes' %}
+        <textarea name="{{ f }}">{{ item.get(f, '') }}</textarea>
+        {% else %}
+        <input type="text" name="{{ f }}" value="{{ item.get(f, '') }}">
+        {% endif %}
+      </div>
+      {% endfor %}
+      <div class="field" style="grid-column:1/-1">
+        <button class="btn btn-gold" type="submit">{{ 'حفظ التعديلات' if is_edit else 'إضافة' }}</button>
+        <a href="/{{ table }}" class="btn btn-dark">إلغاء</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

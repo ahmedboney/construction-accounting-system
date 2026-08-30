@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+*.pyo
+*.zip
+*.rar
+*.log
+*.exe
+instance/
+backups/
+.venv/
+venv/
+build/
+dist/
+*.spec
+.env
+.DS_Store
+vendor/
+config.json
+سكرين شوت النظام/

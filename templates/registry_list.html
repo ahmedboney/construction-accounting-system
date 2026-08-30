@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ icon }} {{ title }}{% endblock %}
+{% block content %}
+<div class="quick-actions">
+  {% if can_write() %}<a href="/{{ table }}/new" class="btn btn-gold">+ إضافة جديد</a>{% endif %}
+  <a href="/export/registry/{{ table }}" class="btn btn-teal">تصدير (Excel)</a>
+  <a href="/export/registry/{{ table }}?fmt=pdf" class="btn btn-gold">تصدير (PDF)</a>
+  <a href="/" class="btn btn-dark">الرئيسية</a>
+</div>
+<div class="panel">
+  <div class="panel-head"><h3>قائمة {{ title }}</h3></div>
+  <div class="panel-body">
+    {% if items %}
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>#</th>
+            {% for c in cols %}<th>{{ c }}</th>{% endfor %}
+            {% if can_write() %}<th>إجراءات</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for it in items %}
+          <tr>
+            <td>{{ it.id }}</td>
+            {% for k in colkeys %}<td>{{ it[k] }}</td>{% endfor %}
+            {% if can_write() %}
+            <td>
+              <div class="toolbar">
+                <a href="/{{ table }}/{{ it.id }}/edit" class="btn btn-dark btn-sm">تعديل</a>
+                {% if table == 'suppliers' %}
+                <a href="/suppliers/{{ it.id }}/statement" class="btn btn-teal btn-sm" title="كشف حساب المورد">كشف حساب</a>
+                {% endif %}
+                <form method="post" action="/{{ table }}/{{ it.id }}/delete" onsubmit="return confirm('تأكيد الحذف؟')">
+                  <button class="btn btn-red btn-sm">حذف</button>
+                </form>
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="big">📭</div>لا توجد بيانات بعد</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

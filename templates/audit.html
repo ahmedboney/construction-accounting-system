@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}سجل العمليات{% endblock %}
+{% block page_title %}🛡️ سجل العمليات{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-head"><h3>آخر العمليات (500)</h3>
+    <div class="toolbar">
+      <a href="/export/audit" class="btn btn-teal btn-sm">تصدير (Excel)</a>
+      <a href="/export/audit?fmt=pdf" class="btn btn-gold btn-sm">تصدير (PDF)</a>
+    </div>
+  </div>
+  <div class="panel-body">
+    {% if logs %}
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>#</th><th>المستخدم</th><th>العملية</th><th>التفاصيل</th><th>الوقت</th></tr></thead>
+      <tbody>
+        {% for l in logs %}
+        <tr><td>{{ l.id }}</td><td>{{ l.user }}</td><td>{{ l.action }}</td><td>{{ l.details }}</td><td>{{ l.at }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="empty-state"><div class="big">🛡️</div>لا توجد عمليات</div>{% endif %}
+  </div>
+</div>
+{% endblock %}
