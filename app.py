@@ -3409,6 +3409,30 @@ def reports():
 # نقطة التشغيل
 # ==================================================================
 if __name__ == "__main__":
+    # وضع الترقية: شغّل  "نظام محاسبة المقاولات.exe --upgrade"  أو  python app.py --upgrade
+    if "--upgrade" in sys.argv:
+        msg = []
+        try:
+            db.create_backup(prefix="pre-upgrade")
+            msg.append("[1/2] تم حفظ نسخة أمان قبل الترقية.")
+        except Exception as exc:
+            msg.append(f"[1/2] تعذّر حفظ نسخة الأمان: {exc}")
+        try:
+            db.migrate()
+            db.cleanup_duplicates()
+            msg.append("[2/2] تمت ترقية قاعدة البيانات بنجاح.")
+        except Exception as exc:
+            msg.append(f"[2/2] فشلت ترقية القاعدة: {exc}")
+        txt = "\n".join(msg)
+        try:
+            db.INSTANCE_DIR.mkdir(parents=True, exist_ok=True)
+            with open(db.INSTANCE_DIR / "upgrade_result.txt", "w", encoding="utf-8") as _f:
+                _f.write(txt + "\n")
+        except Exception:
+            pass
+        print(txt)
+        sys.exit(0)
+
     try:
         if not os.path.exists(db.DB_PATH) or db.query_one("SELECT COUNT(*) c FROM users")["c"] == 0:
             db.init_db()
