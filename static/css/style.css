@@ -666,6 +666,10 @@ table.tbl.tbl-fixed { table-layout: fixed; }
 .tbl .total-row td { font-weight:800; border-top:2px solid var(--gold); color:var(--gold); }
 .tbl .tot-col { text-align:center; }
 
+/* حالة توازن الميزانية العمومية */
+.tbl .balance-ok td { font-weight:700; color:#1a7f37; background:rgba(26,127,55,.08); }
+.tbl .balance-err td { font-weight:700; color:#c62828; background:rgba(198,40,40,.08); }
+
 /* تخطيط صافي الخانات في النماذج */
 .form-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; }
 .form-grid .field { margin:0; }

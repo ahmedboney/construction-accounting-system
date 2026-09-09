@@ -2280,24 +2280,33 @@ def financial():
         balances[a["acc_no"]] = {"name": a["name"], "type": a["type"], "balance": bal}
 
     # قائمة الدخل
-    income_rows = [(k, v["name"], v["balance"]) for k, v in balances.items() if v["type"] == "إيرادات"]
+    # ملاحظة: رصيد الحساب محسوب كـ (افتتاحي + مدين - دائن) فيعكس الطبيعة
+    # الطبيعية للحسابات ذات الرصيد الدائن (الإيرادات). نعكس الاتجاه لعرض الصحيح.
+    income_rows = [(k, v["name"], -v["balance"]) for k, v in balances.items() if v["type"] == "إيرادات"]
     expense_rows = [(k, v["name"], v["balance"]) for k, v in balances.items() if v["type"] == "مصروفات"]
     total_income = sum(v for _, _, v in income_rows)
     total_expense = sum(v for _, _, v in expense_rows)
     net_income = total_income - total_expense
 
     # الميزانية العمومية
+    # الأصول رصيدها الطبيعي مدين (موجب كما هو).
+    # الخصوم وحقوق الملكية رصيدها الطبيعي دائن (سالبة بالصيغة الحالية) -> نعكس.
     asset_rows = [(k, v["name"], v["balance"]) for k, v in balances.items() if v["type"] == "أصول"]
-    liability_rows = [(k, v["name"], v["balance"]) for k, v in balances.items() if v["type"] == "خصوم"]
-    equity_rows = [(k, v["name"], v["balance"]) for k, v in balances.items() if v["type"] == "حقوق ملكية"]
+    asset_rows = [(k, n, bal) for k, n, bal in asset_rows if abs(bal) > 0.005]
+    liability_rows = [(k, v["name"], -v["balance"]) for k, v in balances.items() if v["type"] == "خصوم"]
+    equity_rows = [(k, v["name"], -v["balance"]) for k, v in balances.items() if v["type"] == "حقوق ملكية"]
     total_assets = sum(v for _, _, v in asset_rows)
     total_liabs = sum(v for _, _, v in liability_rows)
     total_equity = sum(v for _, _, v in equity_rows)
 
+    # معادلة التوازن: الأصول = الخصوم + حقوق الملكية + صافي الدخل
+    balanced = abs(total_assets - (total_liabs + total_equity + net_income)) < 0.01
+
     return render_template("financial.html", income_rows=income_rows, expense_rows=expense_rows,
                            total_income=total_income, total_expense=total_expense, net_income=net_income,
                            asset_rows=asset_rows, liability_rows=liability_rows, equity_rows=equity_rows,
-                           total_assets=total_assets, total_liabs=total_liabs, total_equity=total_equity)
+                           total_assets=total_assets, total_liabs=total_liabs, total_equity=total_equity,
+                           balanced=balanced)
 
 
 # ==================================================================
@@ -2873,11 +2882,13 @@ def _financial_data():
         ld = db.query("SELECT COALESCE(SUM(debit),0) s FROM journal_lines WHERE account_id=?", (a["id"],))[0]["s"]
         lc = db.query("SELECT COALESCE(SUM(credit),0) s FROM journal_lines WHERE account_id=?", (a["id"],))[0]["s"]
         items.append({**a, "bal": (a["opening_balance"] or 0) + (ld or 0) - (lc or 0)})
-    revenues = [{"acc_no": b["acc_no"], "name": b["name"], "amount": round(b["bal"], 2)} for b in items if b["type"] == "إيرادات"]
+    # الإيرادات والخصوم وحقوق الملكية رصيدها الطبيعي دائن (سلبي بالصيغة
+    # bal = افتتاحي + مدين - دائن) فنعكس الاتجاه للعرض الصحيح في القوائم.
+    revenues = [{"acc_no": b["acc_no"], "name": b["name"], "amount": round(-b["bal"], 2)} for b in items if b["type"] == "إيرادات"]
     expenses = [{"acc_no": b["acc_no"], "name": b["name"], "amount": round(b["bal"], 2)} for b in items if b["type"] == "مصروفات"]
     assets = [{"acc_no": b["acc_no"], "name": b["name"], "amount": round(b["bal"], 2)} for b in items if b["type"] == "أصول"]
-    liabs = [{"acc_no": b["acc_no"], "name": b["name"], "amount": round(b["bal"], 2)} for b in items if b["type"] == "خصوم"]
-    equity = [{"acc_no": b["acc_no"], "name": b["name"], "amount": round(b["bal"], 2)} for b in items if b["type"] == "حقوق ملكية"]
+    liabs = [{"acc_no": b["acc_no"], "name": b["name"], "amount": round(-b["bal"], 2)} for b in items if b["type"] == "خصوم"]
+    equity = [{"acc_no": b["acc_no"], "name": b["name"], "amount": round(-b["bal"], 2)} for b in items if b["type"] == "حقوق ملكية"]
     tl_rev = round(sum(x["amount"] for x in revenues), 2)
     tl_exp = round(sum(x["amount"] for x in expenses), 2)
     net = round(tl_rev - tl_exp, 2)

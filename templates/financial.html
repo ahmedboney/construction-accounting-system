@@ -39,9 +39,16 @@
           <tr class="total-row"><td>إجمالي الخصوم</td><td class="num">{{ num(total_liabs) }}</td></tr>
           {% for k, name, v in equity_rows %}<tr><td>{{ name }}</td><td class="num">{{ num(v) }}</td></tr>{% endfor %}
           <tr class="total-row"><td>إجمالي حقوق الملكية</td><td class="num">{{ num(total_equity) }}</td></tr>
+          <tr><td>صافي أرباح العام</td><td class="num">{{ num(net_income) }}</td></tr>
+          <tr class="total-row"><td>إجمالي حقوق الملكية + صافي الدخل</td><td class="num">{{ num(total_equity + net_income) }}</td></tr>
         </tbody>
         <tfoot>
-          <tr><td>إجمالي الخصوم + حقوق الملكية</td><td class="num">{{ num(total_liabs + total_equity) }}</td></tr>
+          <tr><td>إجمالي الخصوم + حقوق الملكية + صافي الدخل</td><td class="num">{{ num(total_liabs + total_equity + net_income) }}</td></tr>
+          {% if balanced %}
+          <tr class="balance-ok"><td colspan="2">✔ الميزانية متوازنة (الأصول = الخصوم + حقوق الملكية + صافي الدخل)</td></tr>
+          {% else %}
+          <tr class="balance-err"><td colspan="2">⚠ فرق في الميزانية: {{ num(total_liabs + total_equity + net_income - total_assets) }}</td></tr>
+          {% endif %}
         </tfoot>
       </table>
     </div>
