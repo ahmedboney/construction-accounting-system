@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>استعادة كلمة المرور — نظام محاسبة المقاولات</title>
+  <script>document.documentElement.dataset.theme='dark'</script>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="logo-circle">م</div>
+    <h1>استعادة كلمة المرور</h1>
+    <div class="sub">{{ company_name }}</div>
+    {% if error %}<div class="alert err">{{ error }}</div>{% endif %}
+    {% if ok %}<div class="alert ok">{{ ok }}</div>{% endif %}
+
+    {% if step == 'done' %}
+      <div style="text-align:center"><a class="btn btn-gold" href="/login">تسجيل الدخول</a></div>
+    {% elif step == 'answer' %}
+      <form method="post">
+        <input type="hidden" name="act" value="setup">
+        <input type="hidden" name="username" value="{{ username }}">
+        <div class="field">
+          <label>سؤال الأمان</label>
+          <div class="hint" style="font-size:15px;padding:8px 10px;border:1px solid var(--ink-2);border-radius:6px">{{ question }}</div>
+        </div>
+        <div class="field">
+          <label>إجابة سؤال الأمان</label>
+          <input type="text" name="answer" required autofocus autocomplete="off">
+        </div>
+        <div class="field">
+          <label>كلمة المرور الجديدة</label>
+          <input type="password" name="new_password" required minlength="6" autocomplete="new-password">
+        </div>
+        <button class="btn btn-gold btn-block" type="submit">تغيير كلمة المرور</button>
+      </form>
+    {% else %}
+      <form method="post">
+        <div class="field">
+          <label>اسم المستخدم</label>
+          <input type="text" name="username" required autofocus autocomplete="username" value="{{ request.form.get('username','') }}">
+        </div>
+        <button class="btn btn-gold btn-block" type="submit">متابعة</button>
+      </form>
+    {% endif %}
+
+    <div class="hint" style="margin-top:8px;text-align:center;font-size:12px;opacity:.7">
+      <a href="/login" style="color:inherit">العودة لتسجيل الدخول</a>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

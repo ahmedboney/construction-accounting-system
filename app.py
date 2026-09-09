@@ -20,6 +20,10 @@ import excel_tools as xl
 import pdf_tools as px
 
 db.migrate()
+try:
+    db.cleanup_duplicates()
+except Exception:
+    pass
 
 ROLES = {"admin": "مدير النظام", "accountant": "محاسب", "viewer": "مشاهدة فقط"}
 ENTRY_TYPES = ["عادي", "افتتاحي", "ترحيل", "تسوية", "إقفال"]
@@ -150,7 +154,7 @@ def before():
                 return jsonify(error="طلب من مصدر غير مصرّح به"), 403
             flash("تم رفض الطلب: مصدر غير مصرّح به", "err")
             return redirect("/")
-    allowed = {"login", "static"}
+    allowed = {"login", "forgot", "static"}
     if request.endpoint in allowed:
         return None
     uid = session.get("uid")
@@ -238,6 +242,55 @@ def logout():
         db.audit(g.user["username"], "خروج", "تسجيل خروج")
     session.clear()
     return redirect(url_for("login"))
+
+
+@app.route("/forgot", methods=["GET", "POST"])
+def forgot():
+    """استعادة كلمة المرور عبر سؤال الأمان (يُعرض سؤال المستخدم فقط بعد اسم المستخدم)."""
+    error = None
+    ok = None
+    step = "ask"  # ask → answer → done
+    question = ""
+    username_in = request.form.get("username", "")
+    if request.method == "POST":
+        ip = request.remote_addr or "0.0.0.0"
+        if not _check_rate_limit(ip):
+            error = "محاولات كثيرة، يرجى الانتظار 5 دقائق"
+        else:
+            username = _sanitize(request.form.get("username", "")).strip()
+            user = db.query_one("SELECT * FROM users WHERE username=?", (username,)) if username else None
+            if not user:
+                _record_login_attempt(ip)
+                error = "لا يوجد مستخدم بهذا الاسم"
+            elif request.form.get("act") == "setup":
+                new_pass = request.form.get("new_password", "")
+                if len(new_pass) < 6:
+                    error = "كلمة المرور الجديدة 6 خانات على الأقل"
+                elif not user["security_question"]:
+                    error = "هذا الحساب لا يوجد له سؤال أمان — تواصل مع مدير النظام"
+                else:
+                    answer = request.form.get("answer", "").strip()
+                    if user["security_answer_hash"] and check_password_hash(user["security_answer_hash"], answer):
+                        db.execute("UPDATE users SET password_hash=? WHERE id=?",
+                                   (generate_password_hash(new_pass), user["id"]))
+                        db.audit(username, "استعادة كلمة مرور", "تم تغيير كلمة المرور عبر سؤال الأمان")
+                        ok = "تم تغيير كلمة المرور بنجاح — يمكنك الآن تسجيل الدخول"
+                        step = "done"
+                    else:
+                        _record_login_attempt(ip)
+                        error = "إجابة سؤال الأمان غير صحيحة"
+                        if user["security_question"]:
+                            question = user["security_question"]
+                            step = "answer"
+            else:
+                if user["security_question"]:
+                    question = user["security_question"]
+                    step = "answer"
+                else:
+                    _record_login_attempt(ip)
+                    error = "هذا الحساب لا يوجد له سؤال أمان — تابع التالي"
+    return render_template("forgot.html", error=error, ok=ok, step=step,
+                           question=question, username=username_in)
 
 
 # ------------------------------------------------------------------
@@ -866,6 +919,7 @@ def interim_receive(iid):
                    (amt, rdate, "محصل" if amt > 0 else i["status"], iid))
         if request.form.get("auto_post") and amt > 0:
             cash = AUTO_CASH
+            _purge_source("INTERIM_RECV", iid)
             err = _post_journal("IR", f"تحصيل مستخلص {i['payment_no']}", rdate,
                                 [(cash, amt, 0), ("1201", 0, amt)],
                                 pid=i["project_id"], source_type="INTERIM_RECV", source_id=iid)
@@ -1296,6 +1350,7 @@ def supplier_invoice_pay(siid):
                    (pdate, amt, siid))
         if request.form.get("auto_post") and amt > 0:
             cash = AUTO_CASH if method == "نقداً" else AUTO_BANK
+            _purge_source("INV_PAY", siid)
             err = _post_journal("SI", f"سداد فاتورة مورد {r['invoice_no'] or siid}", pdate,
                                 [("2101", amt, 0), (cash, 0, amt)],
                                 source_type="INV_PAY", source_id=siid)
@@ -2325,15 +2380,31 @@ def users_new():
     full_name = _sanitize(request.form.get("full_name", ""))
     role = _sanitize(request.form.get("role", "viewer"))
     password = request.form.get("password", "")
+    q = _sanitize(request.form.get("security_question", "")).strip()
+    a = request.form.get("security_answer", "").strip()
     if not username or not full_name or len(password) < 6:
         flash("أدخل اسم مستخدم واسم كامل وكلمة مرور 6 خانات على الأقل", "err")
         return redirect(url_for("users"))
     try:
-        db.execute("INSERT INTO users (username, password_hash, full_name, role) VALUES (?,?,?,?)",
-                   (username, generate_password_hash(password), full_name, role))
+        db.execute("INSERT INTO users (username, password_hash, full_name, role, security_question, security_answer_hash)"
+                   " VALUES (?,?,?,?,?,?)",
+                   (username, generate_password_hash(password), full_name, role,
+                    q, generate_password_hash(a) if a else ""))
         flash("تم إنشاء المستخدم", "ok")
     except Exception:
         flash("اسم المستخدم موجود مسبقًا", "err")
+    return redirect(url_for("users"))
+
+
+@app.route("/users/<int:uid>/security", methods=["POST"])
+@require_admin
+def users_security(uid):
+    q = _sanitize(request.form.get("security_question", "")).strip()
+    a = request.form.get("security_answer", "").strip()
+    db.execute("UPDATE users SET security_question=?, security_answer_hash=? WHERE id=?",
+               (q, generate_password_hash(a) if a else "", uid))
+    db.audit(g.user["username"], "إعداد سؤال الأمان", f"مستخدم #{uid}")
+    flash("تم تحديث سؤال الأمان", "ok")
     return redirect(url_for("users"))
 
 
@@ -2476,6 +2547,41 @@ def backup_restore():
             msg += f" (تم حفظ نسخة أمان قبل الاستعادة: {pre})"
         flash(msg, "ok")
     except Exception as exc:
+        flash(f"فشلت الاستعادة: {exc}", "err")
+    return redirect(url_for("backup_list"))
+
+
+@app.route("/backup/restore-file", methods=["POST"])
+@require_admin
+def backup_restore_file():
+    """استعادة من ملف .db يختاره المستخدم من جهازه (يُحفظ كنسخة ثم يستُعاد)."""
+    import io
+    if "file" not in request.files:
+        flash("اختر ملف النسخة الاحتياطية أولًا", "err")
+        return redirect(url_for("backup_list"))
+    f = request.files["file"]
+    if not f or not f.filename:
+        flash("اختر ملف النسخة الاحتياطية أولًا", "err")
+        return redirect(url_for("backup_list"))
+    data = f.read()
+    if len(data) < 20 or data[:16] != b"SQLite format 3\x00":
+        flash("الملف غير صالح — ليس ملف قاعدة بيانات SQLite", "err")
+        return redirect(url_for("backup_list"))
+    ts = db.datetime_now().strftime("%Y-%m-%d_%H%M%S")
+    db.BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    dest = db.BACKUP_DIR / f"manual-upload-{ts}.db"
+    dest.write_bytes(data)
+    try:
+        pre = db.restore_backup(dest.name)
+        msg = "تمت الاستعادة من الملف بنجاح"
+        if pre:
+            msg += f" (تم حفظ نسخة أمان قبل الاستعادة: {pre})"
+        flash(msg, "ok")
+    except Exception as exc:
+        try:
+            dest.unlink()
+        except OSError:
+            pass
         flash(f"فشلت الاستعادة: {exc}", "err")
     return redirect(url_for("backup_list"))
 

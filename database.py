@@ -115,6 +115,8 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,
     full_name TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'accountant',
+    security_question TEXT DEFAULT '',
+    security_answer_hash TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now','localtime'))
 );
 
@@ -548,6 +550,12 @@ def migrate():
             icols = {r[1] for r in conn.execute("PRAGMA table_info(supplier_invoices)")}
             if "due_date" not in icols:
                 conn.execute("ALTER TABLE supplier_invoices ADD COLUMN due_date TEXT DEFAULT ''")
+        has_users = conn.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='users'").fetchone()[0]
+        if has_users:
+            ucols = {r[1] for r in conn.execute("PRAGMA table_info(users)")}
+            for colname, coltype in (("security_question", "TEXT"), ("security_answer_hash", "TEXT")):
+                if colname not in ucols:
+                    conn.execute(f"ALTER TABLE users ADD COLUMN {colname} {coltype} DEFAULT ''")
         conn.commit()
         conn.executescript(SCHEMA)
         conn.commit()
@@ -565,6 +573,53 @@ def set_setting(key, value):
         "INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
         (key, str(value)),
     )
+
+
+def cleanup_duplicates(keep_latest=True):
+    """إصلاح القيود المكررة الناتجة عن النسخ القديمة (نفس المصدر + نفس السطر مرتين).
+
+    - يحذف أي قيد تلقائي له نفس (source_type, source_id) أكثر من نسخة واحدة،
+      ويبقي الأحدث (أو الأقدم) ويتجاهل إعداده.
+    - يمسح بنود أيتام (بنود بلا قيد أم).
+    - يرجع dict فيه عدد العمليات المنفذة.
+    """
+    conn = connect()
+    removed = {"duplicate_entries": 0, "duplicate_lines": 0, "orphan_lines": 0}
+    try:
+        # 1) القيود المكررة بنفس المصدر
+        dup_groups = db_groups(conn, "SELECT source_type, source_id FROM journal_entries "
+                                    "WHERE source_type<>'' AND source_id>0 "
+                                    "GROUP BY source_type, source_id HAVING COUNT(*)>1")
+        for source_type, source_id in dup_groups:
+            ids = [r["id"] for r in conn.execute(
+                "SELECT id FROM journal_entries WHERE source_type=? AND source_id=? ORDER BY id",
+                (source_type, source_id)).fetchall()]
+            keep = ids[-1] if keep_latest else ids[0]
+            drop = [x for x in ids if x != keep]
+            if drop:
+                marks = ",".join("?" for _ in drop)
+                cur = conn.execute(f"DELETE FROM journal_lines WHERE entry_id IN ({marks})", tuple(drop))
+                removed["duplicate_lines"] += cur.rowcount
+                cur = conn.execute(f"DELETE FROM journal_entries WHERE id IN ({marks})", tuple(drop))
+                removed["duplicate_entries"] += cur.rowcount
+        # 2) بنود أيتام (لا يوجد قيد أم)
+        orphans = conn.execute(
+            "SELECT COUNT(*) c FROM journal_lines WHERE entry_id NOT IN (SELECT id FROM journal_entries)"
+        ).fetchone()[0]
+        if orphans:
+            conn.execute("DELETE FROM journal_lines WHERE entry_id NOT IN (SELECT id FROM journal_entries)")
+            removed["orphan_lines"] = orphans
+        conn.commit()
+    finally:
+        conn.close()
+    return removed
+
+
+# ------------------------------------------------------------------
+# دالة مساعدة للاستعلامات الجماعية (تحتاج connect صريح)
+# ------------------------------------------------------------------
+def db_groups(conn, sql):
+    return [tuple(r) for r in conn.execute(sql).fetchall()]
 
 
 def audit(user, action, details=""):

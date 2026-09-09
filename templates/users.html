@@ -16,6 +16,8 @@
           <option value="admin">مدير النظام</option>
         </select>
       </div>
+      <div class="field"><label>سؤال الأمان (لنسيت كلمة المرور)</label><input type="text" name="security_question" placeholder="مثال: اسم والدتك؟"></div>
+      <div class="field"><label>إجابة سؤال الأمان</label><input type="text" name="security_answer" placeholder="احتفظ بها سرًا"></div>
       <div class="field" style="grid-column:1/-1"><button class="btn btn-gold">إنشاء</button></div>
     </form>
   </div>
@@ -44,6 +46,11 @@
               <form method="post" action="/users/{{ u.id }}/password" style="display:flex;gap:4px">
                 <input type="password" name="password" placeholder="كلمة مرور جديدة" style="width:140px">
                 <button class="btn btn-teal btn-sm">تغيير كلمة المرور</button>
+              </form>
+              <form method="post" action="/users/{{ u.id }}/security" style="display:flex;gap:4px">
+                <input type="text" name="security_question" placeholder="سؤال أمان" style="width:150px" value="{{ u.security_question or '' }}">
+                <input type="text" name="security_answer" placeholder="الإجابة" style="width:110px">
+                <button class="btn btn-gold btn-sm">👤 سؤال الأمان</button>
               </form>
               {% if u.id != user.id %}
               <form method="post" action="/users/{{ u.id }}/delete" onsubmit="return confirm('حذف المستخدم؟')"><button class="btn btn-red btn-sm">حذف</button></form>

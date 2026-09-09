@@ -6,6 +6,14 @@
   <form method="post" action="/backup/create">
     <button class="btn btn-gold">+ إنشاء نسخة احتياطية الآن</button>
   </form>
+  <form method="post" action="/backup/restore-file" enctype="multipart/form-data" onsubmit="return confirm('استعادة من هذا الملف؟ سيتم استبدال البيانات الحالية.')">
+    <label class="btn btn-teal" style="cursor:pointer;display:inline-block">
+      <span id="restore-file-label">📂 استعادة من ملف ...</span>
+      <input type="file" name="file" accept=".db,.sqlite,.sqlite3" style="display:none" required
+             onchange="document.getElementById('restore-file-label').textContent = 'استعادة: ' + this.files[0].name">
+    </label>
+    <button class="btn btn-dark" type="submit">↩ استعادة</button>
+  </form>
   <a href="/" class="btn btn-dark">الرئيسية</a>
 </div>
 <div class="panel">
